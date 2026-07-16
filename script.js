@@ -673,17 +673,41 @@
             align-items: ${isMobile ? 'flex-start' : 'center'};
             justify-content: center;
             flex-direction: column;
+    // ================================================
+    // LEVEL UP (VIDEO DI LAYER PALING DEPAN)
+    // ================================================
+    function showLevelUp(level) {
+        // 1. Hentikan video idle sementara
+        if (bgVideo) {
+            bgVideo.pause();
+        }
+
+        // Deteksi HP
+        const isMobile = window.innerWidth < 768;
+
+        // 2. Buat overlay (background transparan)
+        const overlay = document.createElement('div');
+        overlay.className = 'level-up-overlay';
+        overlay.style.cssText = `
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 2000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
             animation: fadeIn 0.5s ease;
-            padding-top: ${isMobile ? '10vh' : '0'};
+            background: rgba(0,0,0,0.2);
         `;
 
-        // 3. Video di dalam overlay
+        // 3. Buat video di layer PALING DEPAN (di atas segalanya)
         const videoWrapper = document.createElement('div');
         videoWrapper.style.cssText = `
             position: absolute;
             top: 0; left: 0;
             width: 100%; height: 100%;
-            z-index: 0;
+            z-index: 10;
             overflow: hidden;
         `;
 
@@ -707,20 +731,21 @@
         videoWrapper.appendChild(videoEl);
         overlay.appendChild(videoWrapper);
 
-        // 4. Konten teks level up (POSISI LEBIH ATAS UNTUK HP)
+        // 4. Konten teks level up (di ATAS video, z-index lebih tinggi)
         const content = document.createElement('div');
         content.style.cssText = `
             position: relative;
-            z-index: 1;
+            z-index: 20;
             text-align: center;
             padding: ${isMobile ? '10px 20px' : '30px 50px'};
             width: 100%;
             display: flex;
             justify-content: center;
             align-items: center;
+            pointer-events: none;
         `;
 
-        // Ukuran font lebih kecil untuk HP
+        // Ukuran font berbeda untuk HP dan Desktop
         const titleSize = isMobile ? '2rem' : '3.5rem';
         const subtitleSize = isMobile ? '1rem' : '1.8rem';
         const paddingBox = isMobile ? '15px 25px' : '30px 50px';
@@ -738,6 +763,7 @@
                 font-family: 'Luckiest Guy', 'Comic Sans MS', cursive;
                 display: inline-block;
                 margin: 0 auto;
+                pointer-events: auto;
             ">
                 <h1 style="
                     font-size: ${titleSize}; 
