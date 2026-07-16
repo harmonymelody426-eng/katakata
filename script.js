@@ -373,25 +373,33 @@
     const bgVideo = document.getElementById('bgVideo');
 
     // Video functions
-    function playVideo(src, duration = 4000) {
-        if (currentTimeout) clearTimeout(currentTimeout);
-        bgVideo.loop = false;
-        bgVideo.pause();
-        bgVideo.src = src;
-        bgVideo.load();
+function playVideo(src, duration = 4000) {
+    if (!bgVideo) return;
+    if (currentTimeout) clearTimeout(currentTimeout);
+
+    bgVideo.loop = false;
+    bgVideo.pause();
+    bgVideo.src = src;
+    bgVideo.load();
+
+    // Tunggu video siap diputar
+    bgVideo.addEventListener('canplaythrough', function playHandler() {
+        bgVideo.removeEventListener('canplaythrough', playHandler);
         bgVideo.muted = false;
         bgVideo.volume = 0.8;
         bgVideo.play().catch(e => console.warn('Video play error:', e));
-        currentTimeout = setTimeout(() => {
-            bgVideo.pause();
-            bgVideo.src = 'backdroputama.mp4';
-            bgVideo.load();
-            bgVideo.loop = true;
-            bgVideo.muted = true;
-            bgVideo.play().catch(e => console.warn('Idle video play error:', e));
-            currentTimeout = null;
-        }, duration);
-    }
+    });
+
+    currentTimeout = setTimeout(() => {
+        bgVideo.pause();
+        bgVideo.src = 'backdroputama.mp4';
+        bgVideo.load();
+        bgVideo.loop = true;
+        bgVideo.muted = true;
+        bgVideo.play().catch(() => {});
+        currentTimeout = null;
+    }, duration);
+}
 
     function stopVideo() {
         if (currentTimeout) clearTimeout(currentTimeout);
