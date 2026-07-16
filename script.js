@@ -881,47 +881,76 @@
                     font-size: ${titleSize}; 
                     color: #2d1f0c; 
                     text-shadow: 0 3px 0 #b87d3a; 
-                    letter-spacing: 2px; 
-                    font-weight: 400; 
-                    margin: 0;
-                    line-height: 1.2;
-                ">🎉 LEVEL ${level} 🎉</h1>
-                <p style="
-                    font-size: ${subtitleSize}; 
-                    color: #3d2b12; 
-                    font-weight: 400; 
-                    margin-top: 2px; 
-                    font-family: 'Segoe UI', 'Comic Sans MS', cursive;
-                    letter-spacing: 1px;
-                ">✨ Kamu Hebat! ✨</p>
-            </div>
-        `;
-        overlay.appendChild(content);
+    // ================================================
+    // LEVEL UP (VERSI RINGAN - TIDAK BERAT)
+    // ================================================
+    function showLevelUp(level) {
+        // Deteksi HP
+        const isMobile = window.innerWidth < 768;
 
-        // 5. Tambahkan ke body
+        // Buat overlay sederhana
+        const overlay = document.createElement('div');
+        overlay.style.cssText = `
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 2000;
+            background: rgba(0,0,0,0.3);
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            padding-top: ${isMobile ? '10vh' : '15vh'};
+            animation: fadeIn 0.3s ease;
+        `;
+
+        // Box level up (tanpa video di dalamnya - biar ringan)
+        const box = document.createElement('div');
+        const titleSize = isMobile ? '2.2rem' : '3.5rem';
+        const subtitleSize = isMobile ? '1.2rem' : '1.8rem';
+        const paddingBox = isMobile ? '20px 30px' : '30px 50px';
+        const borderRadius = isMobile ? '60px 20px 60px 20px' : '120px 40px 120px 40px';
+
+        box.style.cssText = `
+            background: linear-gradient(145deg, #ffe485, #f5b64b);
+            padding: ${paddingBox};
+            border-radius: ${borderRadius};
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5), 0 0 0 4px #fff3c0, 0 0 0 8px rgba(180,124,78,0.6);
+            text-align: center;
+            border: 3px solid #faeac9;
+            font-family: 'Luckiest Guy', 'Comic Sans MS', cursive;
+            position: relative;
+            z-index: 2001;
+        `;
+
+        box.innerHTML = `
+            <h1 style="
+                font-size: ${titleSize}; 
+                color: #2d1f0c; 
+                text-shadow: 0 3px 0 #b87d3a; 
+                letter-spacing: 2px; 
+                font-weight: 400; 
+                margin: 0;
+                line-height: 1.2;
+            ">🎉 LEVEL ${level} 🎉</h1>
+            <p style="
+                font-size: ${subtitleSize}; 
+                color: #3d2b12; 
+                font-weight: 400; 
+                margin-top: 4px; 
+                font-family: 'Segoe UI', 'Comic Sans MS', cursive;
+            ">✨ Kamu Hebat! ✨</p>
+        `;
+
+        overlay.appendChild(box);
         document.body.appendChild(overlay);
+
+        // Confetti
         fireConfetti(50);
 
-        // 6. Hapus overlay setelah 5 detik
-        const overlayTimeout = setTimeout(() => {
-            videoEl.pause();
-            videoEl.src = '';
+        // Hapus setelah 2.5 detik (lebih cepat)
+        setTimeout(() => {
             overlay.remove();
-            if (bgVideo) {
-                const idleFile = getVideoFile('backdroputama');
-                bgVideo.src = idleFile;
-                bgVideo.load();
-                bgVideo.loop = true;
-                bgVideo.muted = true;
-                bgVideo.volume = 0.5;
-                bgVideo.play().catch(() => {});
-            }
-        }, 5000);
-
-        if (window._levelUpTimeout) {
-            clearTimeout(window._levelUpTimeout);
-        }
-        window._levelUpTimeout = overlayTimeout;
+        }, 2500);
     }
 
     // ================================================
