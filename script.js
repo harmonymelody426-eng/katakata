@@ -673,7 +673,7 @@
             align-items: ${isMobile ? 'flex-start' : 'center'};
             justify-content: center;
             flex-direction: column;
-    // ================================================
+    0/ ================================================
     // LEVEL UP (VIDEO DI LAYER PALING DEPAN)
     // ================================================
     function showLevelUp(level) {
@@ -909,50 +909,82 @@
         const subtitleSize = isMobile ? '1.2rem' : '1.8rem';
         const paddingBox = isMobile ? '20px 30px' : '30px 50px';
         const borderRadius = isMobile ? '60px 20px 60px 20px' : '120px 40px 120px 40px';
-
-        box.style.cssText = `
-            background: linear-gradient(145deg, #ffe485, #f5b64b);
-            padding: ${paddingBox};
-            border-radius: ${borderRadius};
-            box-shadow: 0 20px 40px rgba(0,0,0,0.5), 0 0 0 4px #fff3c0, 0 0 0 8px rgba(180,124,78,0.6);
-            text-align: center;
-            border: 3px solid #faeac9;
-            font-family: 'Luckiest Guy', 'Comic Sans MS', cursive;
-            position: relative;
-            z-index: 2001;
+    // ================================================
+    // LEVEL UP (VERSI PALING SEDERHANA - TANPA VIDEO)
+    // ================================================
+    function showLevelUp(level) {
+        // Deteksi HP
+        const isMobile = window.innerWidth < 768;
+        
+        // Buat elemen overlay
+        const overlay = document.createElement('div');
+        overlay.id = 'levelUpOverlay';
+        overlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 9999;
+            background: rgba(0,0,0,0.4);
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            padding-top: ${isMobile ? '12vh' : '18vh'};
+            animation: fadeIn 0.3s ease;
         `;
 
-        box.innerHTML = `
-            <h1 style="
-                font-size: ${titleSize}; 
-                color: #2d1f0c; 
-                text-shadow: 0 3px 0 #b87d3a; 
-                letter-spacing: 2px; 
-                font-weight: 400; 
-                margin: 0;
-                line-height: 1.2;
-            ">🎉 LEVEL ${level} 🎉</h1>
-            <p style="
-                font-size: ${subtitleSize}; 
-                color: #3d2b12; 
-                font-weight: 400; 
-                margin-top: 4px; 
-                font-family: 'Segoe UI', 'Comic Sans MS', cursive;
-            ">✨ Kamu Hebat! ✨</p>
+        // Ukuran responsif
+        const titleSize = isMobile ? '2.2rem' : '3.8rem';
+        const subtitleSize = isMobile ? '1.2rem' : '2rem';
+        const paddingBox = isMobile ? '20px 30px' : '35px 60px';
+        const borderRadius = isMobile ? '60px 20px 60px 20px' : '120px 40px 120px 40px';
+
+        // Box level up
+        overlay.innerHTML = `
+            <div style="
+                background: linear-gradient(145deg, #ffe485, #f5b64b);
+                padding: ${paddingBox};
+                border-radius: ${borderRadius};
+                box-shadow: 0 20px 40px rgba(0,0,0,0.5), 0 0 0 4px #fff3c0, 0 0 0 8px rgba(180,124,78,0.6);
+                text-align: center;
+                border: 3px solid #faeac9;
+                font-family: 'Luckiest Guy', 'Comic Sans MS', cursive;
+                animation: levelUpBounce 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+            ">
+                <h1 style="
+                    font-size: ${titleSize}; 
+                    color: #2d1f0c; 
+                    text-shadow: 0 3px 0 #b87d3a; 
+                    letter-spacing: 2px; 
+                    font-weight: 400; 
+                    margin: 0;
+                    line-height: 1.2;
+                ">🎉 LEVEL ${level} 🎉</h1>
+                <p style="
+                    font-size: ${subtitleSize}; 
+                    color: #3d2b12; 
+                    font-weight: 400; 
+                    margin-top: 4px; 
+                    font-family: 'Segoe UI', 'Comic Sans MS', cursive;
+                ">✨ Kamu Hebat! ✨</p>
+            </div>
         `;
 
-        overlay.appendChild(box);
         document.body.appendChild(overlay);
 
-        // Confetti
-        fireConfetti(50);
-
-        // Hapus setelah 2.5 detik (lebih cepat)
+        // Confetti (panggil dengan delay kecil agar tidak blocking)
         setTimeout(() => {
-            overlay.remove();
+            fireConfetti(40);
+        }, 100);
+
+        // Hapus setelah 2.5 detik
+        setTimeout(() => {
+            if (overlay && overlay.parentNode) {
+                overlay.remove();
+            }
         }, 2500);
     }
-
     // ================================================
     // SPARKLE & CONFETTI
     // ================================================
