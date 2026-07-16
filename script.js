@@ -858,4 +858,176 @@
             await updateRanking(currentPlayerName, score, currentLevel + 1);
         }
         const newData = LEVELS[currentLevel];
-        currentWord
+        currentWord = newData.words[currentWordIndex];
+        currentEmoji = newData.emoji[currentWordIndex];
+        updateObjectImage(currentWord, currentEmoji);
+        resetGameState();
+        render();
+        updateScoreAndLevel();
+        messageBox.innerText = `🔤 Susun: ${currentWord.length} huruf`;
+        messageBox.className = 'message';
+        isProcessing = false;
+        setTimeout(startFloating, 50);
+    }
+
+    function resetGameState() {
+        selectedIndices = [];
+        answerSlots = [];
+        shuffledLetters = shuffleArray(currentWord.split(''));
+        render();
+    }
+
+    function render() {
+        const remainingIndices = [];
+        for (let i=0; i<shuffledLetters.length; i++) {
+            if (!selectedIndices.includes(i)) remainingIndices.push(i);
+        }
+        letterGrid.innerHTML = '';
+        remainingIndices.forEach(originalIndex => {
+            const letter = shuffledLetters[originalIndex];
+            const tile = document.createElement('div');
+            tile.className = 'letter-tile';
+            tile.textContent = letter.toUpperCase();
+            tile.dataset.index = originalIndex;
+            const shine = document.createElement('div');
+            shine.className = 'shine';
+            tile.appendChild(shine);
+            tile.addEventListener('click', (e) => handleLetterClick(originalIndex, e));
+            tile.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                const touch = e.touches[0];
+                handleLetterClick(originalIndex, { clientX: touch.clientX, clientY: touch.clientY });
+            }, { passive: false });
+            letterGrid.appendChild(tile);
+        });
+
+        answerZone.innerHTML = '';
+        for (let i=0; i<currentWord.length; i++) {
+            const slot = document.createElement('div');
+            slot.className = 'answer-slot' + (i < answerSlots.length ? ' filled' : '');
+            slot.textContent = i < answerSlots.length ? answerSlots[i].toUpperCase() : '⬜';
+            answerZone.appendChild(slot);
+        }
+
+        if (animationFrameId) cancelAnimationFrame(animationFrameId);
+        setTimeout(startFloating, 50);
+    }
+
+    function handleLetterClick(index, event) {
+        if (isProcessing) return;
+        if (selectedIndices.includes(index) || answerSlots.length >= currentWord.length) return;
+
+        if (event && event.clientX) {
+            createSparkles(event.clientX, event.clientY, 6);
+        } else {
+            const rect = letterGrid.querySelector(`.letter-tile[data-index="${index}"]`)?.getBoundingClientRect();
+            if (rect) {
+                createSparkles(rect.left + rect.width/2, rect.top + rect.height/2, 6);
+            }
+        }
+
+        const letter = shuffledLetters[index];
+        answerSlots.push(letter);
+        selectedIndices.push(index);
+        render();
+
+        if (answerSlots.length === currentWord.length) {
+            checkAnswer();
+        } else {
+            messageBox.innerText = `📝 ${answerSlots.length}/${currentWord.length}`;
+            messageBox.className = 'message';
+        }
+    }
+
+    // ================================================
+    // CEK JAWABAN
+    // ================================================
+    async function checkAnswer() {
+        if (isProcessing) return;
+        const userAnswer = answerSlots.join('');
+        if (userAnswer === currentWord) {
+            isProcessing = true;
+            score += 10;
+            updateScoreAndLevel();
+            await updateRanking(currentPlayerName, score, currentLevel + 1);
+            messageBox.innerText = `✅ Benar! +10 poin 🎉`;
+            messageBox.className = 'message correct';
+            fireConfetti(25);
+            playVideo('backdropA', 4000);
+            currentWordIndex++;
+            setTimeout(() => loadWord(), 4000);
+        } else {
+            messageBox.innerText = `❌ Coba lagi! "${userAnswer.toUpperCase()}" bukan jawaban.`;
+            messageBox.className = 'message wrong';
+            playVideo('backdropB', 4000);
+            setTimeout(() => {
+                selectedIndices = [];
+                answerSlots = [];
+                render();
+                messageBox.className = 'message';
+                messageBox.innerText = `🔄 Coba susun ulang!`;
+                stopVideo();
+            }, 4000);
+        }
+    }
+
+    function updateScoreAndLevel() {
+        levelDisplay.textContent = currentLevel + 1;
+        scoreDisplay.textContent = score;
+    }
+
+    function resetCurrentWord() {
+        if (isProcessing) return;
+        selectedIndices = [];
+        answerSlots = [];
+        render();
+        messageBox.innerText = `🔄 Huruf diacak! Coba susun.`;
+        messageBox.className = 'message';
+        stopVideo();
+    }
+
+    // ================================================
+    // INIT GAME
+    // ================================================
+    function initGameAfterStart() {
+        initBackgroundVideo();
+        
+        currentLevel = 0;
+        currentWordIndex = 0;
+        score = 0;
+        const first = LEVELS[0];
+        currentWord = first.words[0];
+        currentEmoji = first.emoji[0];
+        updateObjectImage(currentWord, currentEmoji);
+        resetGameState();
+        updateScoreAndLevel();
+        messageBox.innerText = '✨ Susun huruf jadi kata!';
+        messageBox.className = 'message';
+        isProcessing = false;
+        setTimeout(startFloating, 100);
+    }
+
+    // ================================================
+    // RESIZE HANDLER (UPDATE SAAT ROTASI HP)
+    // ================================================
+    window.addEventListener('resize', function() {
+        const isMobile = window.innerWidth < 768;
+        if (bgVideo) {
+            const currentSrc = bgVideo.src || '';
+            const expectedFile = isMobile ? 'backdroputama-hp.mp4' : 'backdroputama.mp4';
+            if (!currentSrc.includes(expectedFile.replace('.mp4', ''))) {
+                console.log('🔄 Orientasi berubah, ganti backdrop');
+                initBackgroundVideo();
+            }
+        }
+    });
+
+    resetBtn.addEventListener('click', resetCurrentWord);
+
+    window.addEventListener('beforeunload', () => {
+        if (animationFrameId) cancelAnimationFrame(animationFrameId);
+        if (currentTimeout) clearTimeout(currentTimeout);
+        if (window._levelUpTimeout) clearTimeout(window._levelUpTimeout);
+    });
+
+})();
