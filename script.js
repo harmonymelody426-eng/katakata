@@ -137,6 +137,73 @@
                 musicPlaying = true;
             }
         }, { once: true });
+    }    // ================================================
+    // MUSIK
+    // ================================================
+    const bgMusic = document.getElementById('bgMusic');
+    const musicControl = document.getElementById('musicControl');
+    let musicPlaying = false; // default false sampai user interaksi
+
+    if (bgMusic) {
+        // Set volume
+        bgMusic.volume = 0.3;
+
+        // Coba mulai musik (autoplay)
+        bgMusic.play().then(() => {
+            musicPlaying = true;
+            if (musicControl) musicControl.textContent = '🔊';
+            console.log('✅ Musik autoplay berhasil');
+        }).catch(() => {
+            console.log('🔇 Autoplay diblokir, tunggu klik user');
+            musicPlaying = false;
+            if (musicControl) musicControl.textContent = '🔇';
+        });
+
+        // Event listener tombol musik (toggle mute/unmute)
+        if (musicControl) {
+            musicControl.addEventListener('click', function(e) {
+                e.stopPropagation();
+                if (bgMusic.paused) {
+                    bgMusic.play().then(() => {
+                        musicControl.textContent = '🔊';
+                        musicPlaying = true;
+                        console.log('▶️ Musik diputar manual');
+                    }).catch(() => {
+                        console.warn('Gagal memutar musik');
+                    });
+                } else {
+                    bgMusic.pause();
+                    musicControl.textContent = '🔇';
+                    musicPlaying = false;
+                    console.log('⏸️ Musik di-pause');
+                }
+            });
+        }
+
+        // Jika user klik di mana saja dan musik masih pause, mulai musik
+        document.addEventListener('click', function startMusicOnClick() {
+            if (bgMusic.paused && !musicPlaying) {
+                bgMusic.play().then(() => {
+                    if (musicControl) musicControl.textContent = '🔊';
+                    musicPlaying = true;
+                    console.log('▶️ Musik mulai setelah klik user');
+                }).catch(() => {
+                    console.warn('Gagal memutar musik setelah klik');
+                });
+                // Hapus listener setelah berhasil
+                document.removeEventListener('click', startMusicOnClick);
+            }
+        });
+
+        // Jika musik gagal diputar karena alasan lain, coba lagi saat user klik
+        document.addEventListener('click', function retryMusic() {
+            if (bgMusic.paused && !musicPlaying) {
+                bgMusic.play().catch(() => {});
+            }
+        });
+
+    } else {
+        console.warn('⚠️ Elemen audio #bgMusic tidak ditemukan!');
     }
 
     // ================================================
