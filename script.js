@@ -451,7 +451,61 @@
     const resetBtn = document.getElementById('resetBtn');
     const confettiContainer = document.getElementById('confetti-container');
     const bgVideo = document.getElementById('bgVideo');
+    // ================================================
+    // DRAG BACKGROUND VIDEO (untuk HP)
+    // ================================================
+    if (bgVideo) {
+        let isDragging = false;
+        let startX = 0, startY = 0;
+        let currentX = 0, currentY = 0;
+        let translateX = 0, translateY = 0;
 
+        // Set initial transform
+        bgVideo.style.transform = `translate(${translateX}px, ${translateY}px)`;
+        bgVideo.style.willChange = 'transform';
+
+        bgVideo.addEventListener('touchstart', function(e) {
+            if (e.touches.length === 1) {
+                isDragging = true;
+                startX = e.touches[0].clientX;
+                startY = e.touches[0].clientY;
+                currentX = translateX;
+                currentY = translateY;
+                bgVideo.style.transition = 'none';
+            }
+        }, { passive: true });
+
+        bgVideo.addEventListener('touchmove', function(e) {
+            if (!isDragging) return;
+            e.preventDefault(); // prevent scroll
+            const dx = e.touches[0].clientX - startX;
+            const dy = e.touches[0].clientY - startY;
+            translateX = currentX + dx;
+            translateY = currentY + dy;
+            // Batasi pergeseran agar tidak terlalu jauh (misal ±150px)
+            const maxOffset = 150;
+            translateX = Math.max(-maxOffset, Math.min(maxOffset, translateX));
+            translateY = Math.max(-maxOffset, Math.min(maxOffset, translateY));
+            bgVideo.style.transform = `translate(${translateX}px, ${translateY}px)`;
+        }, { passive: false });
+
+        bgVideo.addEventListener('touchend', function() {
+            if (isDragging) {
+                isDragging = false;
+                bgVideo.style.transition = 'transform 0.3s ease';
+                // (Opsional) kembali ke posisi semula setelah 3 detik idle? tidak, biarkan user.
+            }
+        }, { passive: true });
+
+        // Reset posisi saat layar berubah orientasi
+        window.addEventListener('resize', function() {
+            translateX = 0;
+            translateY = 0;
+            bgVideo.style.transform = `translate(0px, 0px)`;
+            bgVideo.style.transition = 'transform 0.5s ease';
+        });
+    }
+    
     // ================================================
     // FUNGSI VIDEO
     // ================================================
