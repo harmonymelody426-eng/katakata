@@ -889,101 +889,94 @@
         const isMobile = window.innerWidth < 768;
 
         // Buat overlay sederhana
-        const overlay = document.createElement('div');
-        overlay.style.cssText = `
-            position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            z-index: 2000;
-            background: rgba(0,0,0,0.3);
-            display: flex;
-            align-items: flex-start;
-            justify-content: center;
-            padding-top: ${isMobile ? '10vh' : '15vh'};
-            animation: fadeIn 0.3s ease;
-        `;
-
-        // Box level up (tanpa video di dalamnya - biar ringan)
-        const box = document.createElement('div');
-        const titleSize = isMobile ? '2.2rem' : '3.5rem';
-        const subtitleSize = isMobile ? '1.2rem' : '1.8rem';
-        const paddingBox = isMobile ? '20px 30px' : '30px 50px';
-        const borderRadius = isMobile ? '60px 20px 60px 20px' : '120px 40px 120px 40px';
     // ================================================
-    // LEVEL UP (VERSI PALING SEDERHANA - TANPA VIDEO)
+    // LEVEL UP (POSISI ATAS - ANIMASI TETAP)
     // ================================================
     function showLevelUp(level) {
-        // Deteksi HP
-        const isMobile = window.innerWidth < 768;
-        
-        // Buat elemen overlay
-        const overlay = document.createElement('div');
-        overlay.id = 'levelUpOverlay';
-        overlay.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 9999;
-            background: rgba(0,0,0,0.4);
-            display: flex;
-            align-items: flex-start;
-            justify-content: center;
-            padding-top: ${isMobile ? '12vh' : '18vh'};
-            animation: fadeIn 0.3s ease;
-        `;
+        // Cegah multiple call
+        if (window._levelUpActive) return;
+        window._levelUpActive = true;
 
-        // Ukuran responsif
-        const titleSize = isMobile ? '2.2rem' : '3.8rem';
-        const subtitleSize = isMobile ? '1.2rem' : '2rem';
-        const paddingBox = isMobile ? '20px 30px' : '35px 60px';
-        const borderRadius = isMobile ? '60px 20px 60px 20px' : '120px 40px 120px 40px';
+        try {
+            const isMobile = window.innerWidth < 768;
+            
+            // Buat overlay
+            const overlay = document.createElement('div');
+            overlay.id = 'levelUpOverlay';
+            
+            // Style overlay - posisi top
+            overlay.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                z-index: 9999;
+                background: rgba(0,0,0,0.3);
+                display: flex;
+                align-items: flex-start;
+                justify-content: center;
+                padding-top: ${isMobile ? '10vh' : '15vh'};
+                animation: fadeIn 0.4s ease;
+            `;
 
-        // Box level up
-        overlay.innerHTML = `
-            <div style="
-                background: linear-gradient(145deg, #ffe485, #f5b64b);
-                padding: ${paddingBox};
-                border-radius: ${borderRadius};
-                box-shadow: 0 20px 40px rgba(0,0,0,0.5), 0 0 0 4px #fff3c0, 0 0 0 8px rgba(180,124,78,0.6);
-                text-align: center;
-                border: 3px solid #faeac9;
-                font-family: 'Luckiest Guy', 'Comic Sans MS', cursive;
-                animation: levelUpBounce 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
-            ">
-                <h1 style="
-                    font-size: ${titleSize}; 
-                    color: #2d1f0c; 
-                    text-shadow: 0 3px 0 #b87d3a; 
-                    letter-spacing: 2px; 
-                    font-weight: 400; 
-                    margin: 0;
-                    line-height: 1.2;
-                ">🎉 LEVEL ${level} 🎉</h1>
-                <p style="
-                    font-size: ${subtitleSize}; 
-                    color: #3d2b12; 
-                    font-weight: 400; 
-                    margin-top: 4px; 
-                    font-family: 'Segoe UI', 'Comic Sans MS', cursive;
-                ">✨ Kamu Hebat! ✨</p>
-            </div>
-        `;
+            // Ukuran responsif
+            const titleSize = isMobile ? '2.2rem' : '3.8rem';
+            const subtitleSize = isMobile ? '1.2rem' : '2rem';
+            const paddingBox = isMobile ? '18px 28px' : '35px 60px';
+            const borderRadius = isMobile ? '50px 16px 50px 16px' : '120px 40px 120px 40px';
 
-        document.body.appendChild(overlay);
+            // Box level up - animasi bounce tetap
+            overlay.innerHTML = `
+                <div style="
+                    background: linear-gradient(145deg, #ffe485, #f5b64b);
+                    padding: ${paddingBox};
+                    border-radius: ${borderRadius};
+                    box-shadow: 0 20px 40px rgba(0,0,0,0.5), 0 0 0 4px #fff3c0, 0 0 0 8px rgba(180,124,78,0.6);
+                    text-align: center;
+                    border: 3px solid #faeac9;
+                    font-family: 'Luckiest Guy', 'Comic Sans MS', cursive;
+                    animation: levelUpBounce 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+                ">
+                    <h1 style="
+                        font-size: ${titleSize}; 
+                        color: #2d1f0c; 
+                        text-shadow: 0 3px 0 #b87d3a; 
+                        letter-spacing: 2px; 
+                        font-weight: 400; 
+                        margin: 0;
+                        line-height: 1.2;
+                    ">🎉 LEVEL ${level} 🎉</h1>
+                    <p style="
+                        font-size: ${subtitleSize}; 
+                        color: #3d2b12; 
+                        font-weight: 400; 
+                        margin-top: 4px; 
+                        font-family: 'Segoe UI', 'Comic Sans MS', cursive;
+                    ">✨ Kamu Hebat! ✨</p>
+                </div>
+            `;
 
-        // Confetti (panggil dengan delay kecil agar tidak blocking)
-        setTimeout(() => {
-            fireConfetti(40);
-        }, 100);
+            document.body.appendChild(overlay);
 
-        // Hapus setelah 2.5 detik
-        setTimeout(() => {
-            if (overlay && overlay.parentNode) {
-                overlay.remove();
-            }
-        }, 2500);
+            // Confetti
+            fireConfetti(45);
+
+            // Hapus setelah 2.5 detik
+            setTimeout(function() {
+                try {
+                    if (overlay && overlay.parentNode) {
+                        overlay.parentNode.removeChild(overlay);
+                    }
+                    window._levelUpActive = false;
+                } catch(e) {
+                    window._levelUpActive = false;
+                }
+            }, 2500);
+
+        } catch(e) {
+            window._levelUpActive = false;
+        }
     }
     // ================================================
     // SPARKLE & CONFETTI
