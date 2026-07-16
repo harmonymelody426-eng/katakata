@@ -441,12 +441,20 @@
     }
 
     function showLevelUp(level) {
+        console.log(`🎉 Level Up! Level ${level} - Putar video backdropnaiklevel.mp4`);
+        
         const overlay = document.createElement('div');
         overlay.className = 'level-up-overlay';
         overlay.innerHTML = `<div class="level-up-box"><h1>🎉 LEVEL ${level} 🎉</h1><p>✨ Kamu Hebat! ✨</p></div>`;
         document.body.appendChild(overlay);
         fireConfetti(50);
-        setTimeout(() => overlay.remove(), 2000);
+        
+        // Putar backdrop naik level (5 detik)
+        playVideo('backdropnaiklevel.mp4', 5000);
+        
+        setTimeout(() => {
+            overlay.remove();
+        }, 2000);
     }
 
     function updateObjectImage(word, emoji) {
