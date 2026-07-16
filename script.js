@@ -598,299 +598,7 @@
     }
 
     // ================================================
-    // LEVEL UP (VIDEO DI BELAKANG OVERLAY)
-    // ================================================
-    function showLevelUp(level) {
-        // 1. Hentikan video idle sementara
-        if (bgVideo) {
-            bgVideo.pause();
-        }
-
-        // 2. Buat overlay (background transparan + video di dalamnya)
-        const overlay = document.createElement('div');
-        overlay.className = 'level-up-overlay';
-        overlay.style.cssText = `
-            position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            z-index: 1000;
-            background: rgba(0,0,0,0.3);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-direction: column;
-            animation: fadeIn 0.5s ease;
-        `;
-
-        // 3. Buat video di dalam overlay (di belakang teks)
-        const videoWrapper = document.createElement('div');
-        videoWrapper.style.cssText = `
-            position: absolute;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            z-index: 0;
-            overflow: hidden;
-        `;
-
-        const videoEl = document.createElement('video');
-        videoEl.src = getVideoFile('backdropnaiklevel');
-        videoEl.autoplay = true;
-        videoEl.muted = false;
-        videoEl.volume = 0.8;
-        videoEl.playsInline = true;
-        videoEl.style.cssText = `
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            position: absolute;
-            top: 0;
-            left: 0;
-        `;
-        videoEl.load();
-        videoEl.play().catch(e => console.warn('⚠️ Video naik level error:', e));
-    // ================================================
-    // LEVEL UP (VIDEO DI BELAKANG OVERLAY) - POSISI ATAS UNTUK HP
-    // ================================================
-    function showLevelUp(level) {
-        // 1. Hentikan video idle sementara
-        if (bgVideo) {
-            bgVideo.pause();
-        }
-
-        // Deteksi HP
-        const isMobile = window.innerWidth < 768;
-
-        // 2. Buat overlay
-        const overlay = document.createElement('div');
-        overlay.className = 'level-up-overlay';
-        overlay.style.cssText = `
-            position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            z-index: 1000;
-            background: rgba(0,0,0,0.3);
-            display: flex;
-            align-items: ${isMobile ? 'flex-start' : 'center'};
-            justify-content: center;
-            flex-direction: column;
-    0/ ================================================
-    // LEVEL UP (VIDEO DI LAYER PALING DEPAN)
-    // ================================================
-    function showLevelUp(level) {
-        // 1. Hentikan video idle sementara
-        if (bgVideo) {
-            bgVideo.pause();
-        }
-
-        // Deteksi HP
-        const isMobile = window.innerWidth < 768;
-
-        // 2. Buat overlay (background transparan)
-        const overlay = document.createElement('div');
-        overlay.className = 'level-up-overlay';
-        overlay.style.cssText = `
-            position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            z-index: 2000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-direction: column;
-            animation: fadeIn 0.5s ease;
-            background: rgba(0,0,0,0.2);
-        `;
-
-        // 3. Buat video di layer PALING DEPAN (di atas segalanya)
-        const videoWrapper = document.createElement('div');
-        videoWrapper.style.cssText = `
-            position: absolute;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            z-index: 10;
-            overflow: hidden;
-        `;
-
-        const videoEl = document.createElement('video');
-        videoEl.src = getVideoFile('backdropnaiklevel');
-        videoEl.autoplay = true;
-        videoEl.muted = false;
-        videoEl.volume = 0.8;
-        videoEl.playsInline = true;
-        videoEl.style.cssText = `
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            position: absolute;
-            top: 0;
-            left: 0;
-        `;
-        videoEl.load();
-        videoEl.play().catch(e => console.warn('⚠️ Video naik level error:', e));
-
-        videoWrapper.appendChild(videoEl);
-        overlay.appendChild(videoWrapper);
-
-        // 4. Konten teks level up (di ATAS video, z-index lebih tinggi)
-        const content = document.createElement('div');
-        content.style.cssText = `
-            position: relative;
-            z-index: 20;
-            text-align: center;
-            padding: ${isMobile ? '10px 20px' : '30px 50px'};
-            width: 100%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            pointer-events: none;
-        `;
-
-        // Ukuran font berbeda untuk HP dan Desktop
-        const titleSize = isMobile ? '2rem' : '3.5rem';
-        const subtitleSize = isMobile ? '1rem' : '1.8rem';
-        const paddingBox = isMobile ? '15px 25px' : '30px 50px';
-        const borderRadius = isMobile ? '60px 20px 60px 20px' : '120px 40px 120px 40px';
-        const shadowSize = isMobile ? '0 20px 30px rgba(0,0,0,0.5), 0 0 0 3px #fff3c0, 0 0 0 6px rgba(180,124,78,0.6)' : '0 30px 40px rgba(0,0,0,0.5), 0 0 0 6px #fff3c0, 0 0 0 12px rgba(180,124,78,0.6)';
-
-        content.innerHTML = `
-            <div class="level-up-box" style="
-                background: linear-gradient(145deg, #ffe485, #f5b64b);
-                padding: ${paddingBox};
-                border-radius: ${borderRadius};
-                box-shadow: ${shadowSize};
-                text-align: center;
-                border: 3px solid #faeac9;
-                font-family: 'Luckiest Guy', 'Comic Sans MS', cursive;
-                display: inline-block;
-                margin: 0 auto;
-                pointer-events: auto;
-            ">
-                <h1 style="
-                    font-size: ${titleSize}; 
-                    color: #2d1f0c; 
-                    text-shadow: 0 3px 0 #b87d3a; 
-                    letter-spacing: 2px; 
-                    font-weight: 400; 
-                    margin: 0;
-                    line-height: 1.2;
-                ">🎉 LEVEL ${level} 🎉</h1>
-                <p style="
-                    font-size: ${subtitleSize}; 
-                    color: #3d2b12; 
-                    font-weight: 400; 
-                    margin-top: 2px; 
-                    font-family: 'Segoe UI', 'Comic Sans MS', cursive;
-                    letter-spacing: 1px;
-                ">✨ Kamu Hebat! ✨</p>
-            </div>
-        `;
-    // ================================================
-    // LEVEL UP (VIDEO DI LAYER PALING DEPAN - TEKS DI ATAS)
-    // ================================================
-    function showLevelUp(level) {
-        // 1. Hentikan video idle sementara
-        if (bgVideo) {
-            bgVideo.pause();
-        }
-
-        // Deteksi HP
-        const isMobile = window.innerWidth < 768;
-
-        // 2. Buat overlay
-        const overlay = document.createElement('div');
-        overlay.className = 'level-up-overlay';
-        overlay.style.cssText = `
-            position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            z-index: 2000;
-            display: flex;
-            align-items: flex-start;
-            justify-content: center;
-            flex-direction: column;
-            animation: fadeIn 0.5s ease;
-            background: rgba(0,0,0,0.2);
-            padding-top: ${isMobile ? '8vh' : '12vh'};
-        `;
-
-        // 3. Video di layer PALING DEPAN
-        const videoWrapper = document.createElement('div');
-        videoWrapper.style.cssText = `
-            position: absolute;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            z-index: 10;
-            overflow: hidden;
-        `;
-
-        const videoEl = document.createElement('video');
-        videoEl.src = getVideoFile('backdropnaiklevel');
-        videoEl.autoplay = true;
-        videoEl.muted = false;
-        videoEl.volume = 0.8;
-        videoEl.playsInline = true;
-        videoEl.style.cssText = `
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            position: absolute;
-            top: 0;
-            left: 0;
-        `;
-        videoEl.load();
-        videoEl.play().catch(e => console.warn('⚠️ Video naik level error:', e));
-
-        videoWrapper.appendChild(videoEl);
-        overlay.appendChild(videoWrapper);
-
-        // 4. Konten teks level up (di ATAS video, posisi di top)
-        const content = document.createElement('div');
-        content.style.cssText = `
-            position: relative;
-            z-index: 20;
-            text-align: center;
-            padding: ${isMobile ? '10px 20px' : '20px 40px'};
-            width: 100%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            pointer-events: none;
-        `;
-
-        // Ukuran font lebih kecil untuk HP
-        const titleSize = isMobile ? '2rem' : '3.5rem';
-        const subtitleSize = isMobile ? '1rem' : '1.8rem';
-        const paddingBox = isMobile ? '15px 25px' : '30px 50px';
-        const borderRadius = isMobile ? '60px 20px 60px 20px' : '120px 40px 120px 40px';
-        const shadowSize = isMobile ? '0 20px 30px rgba(0,0,0,0.5), 0 0 0 3px #fff3c0, 0 0 0 6px rgba(180,124,78,0.6)' : '0 30px 40px rgba(0,0,0,0.5), 0 0 0 6px #fff3c0, 0 0 0 12px rgba(180,124,78,0.6)';
-
-        content.innerHTML = `
-            <div class="level-up-box" style="
-                background: linear-gradient(145deg, #ffe485, #f5b64b);
-                padding: ${paddingBox};
-                border-radius: ${borderRadius};
-                box-shadow: ${shadowSize};
-                text-align: center;
-                border: 3px solid #faeac9;
-                font-family: 'Luckiest Guy', 'Comic Sans MS', cursive;
-                display: inline-block;
-                margin: 0 auto;
-                pointer-events: auto;
-            ">
-                <h1 style="
-                    font-size: ${titleSize}; 
-                    color: #2d1f0c; 
-                    text-shadow: 0 3px 0 #b87d3a; 
-    // ================================================
-    // LEVEL UP (VERSI RINGAN - TIDAK BERAT)
-    // ================================================
-    function showLevelUp(level) {
-        // Deteksi HP
-        const isMobile = window.innerWidth < 768;
-
-        // Buat overlay sederhana
-    // ================================================
-    // LEVEL UP (POSISI ATAS - ANIMASI TETAP)
+    // LEVEL UP (TANPA CSS KEYFRAMES - PAKAI JS ANIMASI)
     // ================================================
     function showLevelUp(level) {
         // Cegah multiple call
@@ -904,7 +612,7 @@
             const overlay = document.createElement('div');
             overlay.id = 'levelUpOverlay';
             
-            // Style overlay - posisi top
+            // Style overlay - tanpa animasi CSS
             overlay.style.cssText = `
                 position: fixed;
                 top: 0;
@@ -917,7 +625,8 @@
                 align-items: flex-start;
                 justify-content: center;
                 padding-top: ${isMobile ? '10vh' : '15vh'};
-                animation: fadeIn 0.4s ease;
+                opacity: 0;
+                transition: opacity 0.3s ease;
             `;
 
             // Ukuran responsif
@@ -926,9 +635,9 @@
             const paddingBox = isMobile ? '18px 28px' : '35px 60px';
             const borderRadius = isMobile ? '50px 16px 50px 16px' : '120px 40px 120px 40px';
 
-            // Box level up - animasi bounce tetap
+            // Box level up - tanpa animasi CSS
             overlay.innerHTML = `
-                <div style="
+                <div id="levelUpBox" style="
                     background: linear-gradient(145deg, #ffe485, #f5b64b);
                     padding: ${paddingBox};
                     border-radius: ${borderRadius};
@@ -936,7 +645,9 @@
                     text-align: center;
                     border: 3px solid #faeac9;
                     font-family: 'Luckiest Guy', 'Comic Sans MS', cursive;
-                    animation: levelUpBounce 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+                    transform: scale(0.3) rotate(-5deg);
+                    opacity: 0;
+                    transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
                 ">
                     <h1 style="
                         font-size: ${titleSize}; 
@@ -959,25 +670,52 @@
 
             document.body.appendChild(overlay);
 
-            // Confetti
-            fireConfetti(45);
+            // Animasi masuk (fade in + bounce) pakai JS
+            requestAnimationFrame(() => {
+                overlay.style.opacity = '1';
+                const box = document.getElementById('levelUpBox');
+                if (box) {
+                    box.style.transform = 'scale(1) rotate(0deg)';
+                    box.style.opacity = '1';
+                }
+            });
+
+            // Confetti (dengan delay)
+            setTimeout(() => {
+                fireConfetti(40);
+            }, 200);
 
             // Hapus setelah 2.5 detik
             setTimeout(function() {
                 try {
+                    // Animasi keluar
+                    const box = document.getElementById('levelUpBox');
+                    if (box) {
+                        box.style.transform = 'scale(0.5) rotate(5deg)';
+                        box.style.opacity = '0';
+                    }
+                    overlay.style.opacity = '0';
+                    
+                    setTimeout(() => {
+                        if (overlay && overlay.parentNode) {
+                            overlay.parentNode.removeChild(overlay);
+                        }
+                        window._levelUpActive = false;
+                    }, 400);
+                } catch(e) {
                     if (overlay && overlay.parentNode) {
                         overlay.parentNode.removeChild(overlay);
                     }
-                    window._levelUpActive = false;
-                } catch(e) {
                     window._levelUpActive = false;
                 }
             }, 2500);
 
         } catch(e) {
+            console.warn('showLevelUp error:', e);
             window._levelUpActive = false;
         }
     }
+
     // ================================================
     // SPARKLE & CONFETTI
     // ================================================
@@ -1120,176 +858,4 @@
             await updateRanking(currentPlayerName, score, currentLevel + 1);
         }
         const newData = LEVELS[currentLevel];
-        currentWord = newData.words[currentWordIndex];
-        currentEmoji = newData.emoji[currentWordIndex];
-        updateObjectImage(currentWord, currentEmoji);
-        resetGameState();
-        render();
-        updateScoreAndLevel();
-        messageBox.innerText = `🔤 Susun: ${currentWord.length} huruf`;
-        messageBox.className = 'message';
-        isProcessing = false;
-        setTimeout(startFloating, 50);
-    }
-
-    function resetGameState() {
-        selectedIndices = [];
-        answerSlots = [];
-        shuffledLetters = shuffleArray(currentWord.split(''));
-        render();
-    }
-
-    function render() {
-        const remainingIndices = [];
-        for (let i=0; i<shuffledLetters.length; i++) {
-            if (!selectedIndices.includes(i)) remainingIndices.push(i);
-        }
-        letterGrid.innerHTML = '';
-        remainingIndices.forEach(originalIndex => {
-            const letter = shuffledLetters[originalIndex];
-            const tile = document.createElement('div');
-            tile.className = 'letter-tile';
-            tile.textContent = letter.toUpperCase();
-            tile.dataset.index = originalIndex;
-            const shine = document.createElement('div');
-            shine.className = 'shine';
-            tile.appendChild(shine);
-            tile.addEventListener('click', (e) => handleLetterClick(originalIndex, e));
-            tile.addEventListener('touchstart', (e) => {
-                e.preventDefault();
-                const touch = e.touches[0];
-                handleLetterClick(originalIndex, { clientX: touch.clientX, clientY: touch.clientY });
-            }, { passive: false });
-            letterGrid.appendChild(tile);
-        });
-
-        answerZone.innerHTML = '';
-        for (let i=0; i<currentWord.length; i++) {
-            const slot = document.createElement('div');
-            slot.className = 'answer-slot' + (i < answerSlots.length ? ' filled' : '');
-            slot.textContent = i < answerSlots.length ? answerSlots[i].toUpperCase() : '⬜';
-            answerZone.appendChild(slot);
-        }
-
-        if (animationFrameId) cancelAnimationFrame(animationFrameId);
-        setTimeout(startFloating, 50);
-    }
-
-    function handleLetterClick(index, event) {
-        if (isProcessing) return;
-        if (selectedIndices.includes(index) || answerSlots.length >= currentWord.length) return;
-
-        if (event && event.clientX) {
-            createSparkles(event.clientX, event.clientY, 6);
-        } else {
-            const rect = letterGrid.querySelector(`.letter-tile[data-index="${index}"]`)?.getBoundingClientRect();
-            if (rect) {
-                createSparkles(rect.left + rect.width/2, rect.top + rect.height/2, 6);
-            }
-        }
-
-        const letter = shuffledLetters[index];
-        answerSlots.push(letter);
-        selectedIndices.push(index);
-        render();
-
-        if (answerSlots.length === currentWord.length) {
-            checkAnswer();
-        } else {
-            messageBox.innerText = `📝 ${answerSlots.length}/${currentWord.length}`;
-            messageBox.className = 'message';
-        }
-    }
-
-    // ================================================
-    // CEK JAWABAN
-    // ================================================
-    async function checkAnswer() {
-        if (isProcessing) return;
-        const userAnswer = answerSlots.join('');
-        if (userAnswer === currentWord) {
-            isProcessing = true;
-            score += 10;
-            updateScoreAndLevel();
-            await updateRanking(currentPlayerName, score, currentLevel + 1);
-            messageBox.innerText = `✅ Benar! +10 poin 🎉`;
-            messageBox.className = 'message correct';
-            fireConfetti(25);
-            playVideo('backdropA', 4000);
-            currentWordIndex++;
-            setTimeout(() => loadWord(), 4000);
-        } else {
-            messageBox.innerText = `❌ Coba lagi! "${userAnswer.toUpperCase()}" bukan jawaban.`;
-            messageBox.className = 'message wrong';
-            playVideo('backdropB', 4000);
-            setTimeout(() => {
-                selectedIndices = [];
-                answerSlots = [];
-                render();
-                messageBox.className = 'message';
-                messageBox.innerText = `🔄 Coba susun ulang!`;
-                stopVideo();
-            }, 4000);
-        }
-    }
-
-    function updateScoreAndLevel() {
-        levelDisplay.textContent = currentLevel + 1;
-        scoreDisplay.textContent = score;
-    }
-
-    function resetCurrentWord() {
-        if (isProcessing) return;
-        selectedIndices = [];
-        answerSlots = [];
-        render();
-        messageBox.innerText = `🔄 Huruf diacak! Coba susun.`;
-        messageBox.className = 'message';
-        stopVideo();
-    }
-
-    // ================================================
-    // INIT GAME
-    // ================================================
-    function initGameAfterStart() {
-        initBackgroundVideo();
-        
-        currentLevel = 0;
-        currentWordIndex = 0;
-        score = 0;
-        const first = LEVELS[0];
-        currentWord = first.words[0];
-        currentEmoji = first.emoji[0];
-        updateObjectImage(currentWord, currentEmoji);
-        resetGameState();
-        updateScoreAndLevel();
-        messageBox.innerText = '✨ Susun huruf jadi kata!';
-        messageBox.className = 'message';
-        isProcessing = false;
-        setTimeout(startFloating, 100);
-    }
-
-    // ================================================
-    // RESIZE HANDLER (UPDATE SAAT ROTASI HP)
-    // ================================================
-    window.addEventListener('resize', function() {
-        const isMobile = window.innerWidth < 768;
-        if (bgVideo) {
-            const currentSrc = bgVideo.src || '';
-            const expectedFile = isMobile ? 'backdroputama-hp.mp4' : 'backdroputama.mp4';
-            if (!currentSrc.includes(expectedFile.replace('.mp4', ''))) {
-                console.log('🔄 Orientasi berubah, ganti backdrop');
-                initBackgroundVideo();
-            }
-        }
-    });
-
-    resetBtn.addEventListener('click', resetCurrentWord);
-
-    window.addEventListener('beforeunload', () => {
-        if (animationFrameId) cancelAnimationFrame(animationFrameId);
-        if (currentTimeout) clearTimeout(currentTimeout);
-        if (window._levelUpTimeout) clearTimeout(window._levelUpTimeout);
-    });
-
-})();
+        currentWord
