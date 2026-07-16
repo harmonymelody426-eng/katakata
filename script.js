@@ -98,7 +98,7 @@
     }
 
     // ================================================
-    // MUSIK (sudah diperbaiki, no duplicate)
+    // MUSIK (sudah diperbaiki dengan error detail)
     // ================================================
     const bgMusic = document.getElementById('bgMusic');
     const musicControl = document.getElementById('musicControl');
@@ -106,16 +106,38 @@
 
     if (bgMusic) {
         bgMusic.volume = 0.3;
+        bgMusic.loop = true;
+
+        // Fungsi play dengan error detail
+        function playMusic() {
+            return bgMusic.play().then(() => {
+                musicPlaying = true;
+                if (musicControl) musicControl.textContent = '🔊';
+                console.log('✅ Musik berhasil diputar');
+            }).catch(err => {
+                console.warn('❌ Gagal memutar musik:', err.message);
+                // Jika file tidak ditemukan, coba reload sumber audio
+                if (err.name === 'NotSupportedError' || err.message.includes('404') || err.message.includes('Failed to load')) {
+                    console.warn('🔄 Coba reload audio source...');
+                    bgMusic.load(); // reload src
+                    return bgMusic.play().then(() => {
+                        musicPlaying = true;
+                        if (musicControl) musicControl.textContent = '🔊';
+                        console.log('✅ Musik berhasil diputar setelah reload');
+                    }).catch(e => {
+                        console.warn('❌ Gagal juga setelah reload:', e.message);
+                        throw e;
+                    });
+                }
+                throw err;
+            });
+        }
 
         // Coba autoplay
-        bgMusic.play().then(() => {
-            musicPlaying = true;
-            if (musicControl) musicControl.textContent = '🔊';
-            console.log('✅ Musik autoplay berhasil');
-        }).catch(() => {
-            console.log('🔇 Autoplay diblokir, tunggu klik user');
+        playMusic().catch(() => {
             musicPlaying = false;
             if (musicControl) musicControl.textContent = '🔇';
+            console.log('🔇 Autoplay diblokir, tunggu klik user');
         });
 
         // Tombol kontrol musik
@@ -123,13 +145,7 @@
             musicControl.addEventListener('click', function(e) {
                 e.stopPropagation();
                 if (bgMusic.paused) {
-                    bgMusic.play().then(() => {
-                        musicControl.textContent = '🔊';
-                        musicPlaying = true;
-                        console.log('▶️ Musik diputar manual');
-                    }).catch(() => {
-                        console.warn('Gagal memutar musik');
-                    });
+                    playMusic().catch(() => {});
                 } else {
                     bgMusic.pause();
                     musicControl.textContent = '🔇';
@@ -140,25 +156,23 @@
         }
 
         // Jika user klik di mana saja dan musik masih pause, mulai musik
+        let musicStarted = false;
         document.addEventListener('click', function startMusicOnClick() {
-            if (bgMusic.paused && !musicPlaying) {
-                bgMusic.play().then(() => {
-                    if (musicControl) musicControl.textContent = '🔊';
-                    musicPlaying = true;
-                    console.log('▶️ Musik mulai setelah klik user');
-                }).catch(() => {
-                    console.warn('Gagal memutar musik setelah klik');
+            if (!musicStarted && bgMusic.paused) {
+                musicStarted = true;
+                playMusic().catch(() => {
+                    musicStarted = false; // jika gagal, coba lagi nanti
                 });
                 document.removeEventListener('click', startMusicOnClick);
             }
         });
 
-        // Retry jika ada klik lain
+        // Retry jika ada klik lain (hanya sekali)
         document.addEventListener('click', function retryMusic() {
             if (bgMusic.paused && !musicPlaying) {
-                bgMusic.play().catch(() => {});
+                playMusic().catch(() => {});
             }
-        });
+        }, { once: true });
 
     } else {
         console.warn('⚠️ Elemen audio #bgMusic tidak ditemukan!');
