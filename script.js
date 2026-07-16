@@ -5,7 +5,7 @@
     const PIXABAY_API_KEY = '56708277-1122a65ab11fe5066b2a03f65';
 
     // ================================================
-    // SUPABASE CONFIG (sudah diisi dengan credentialmu)
+    // SUPABASE CONFIG
     // ================================================
     const SUPABASE_URL = 'https://deicxytgwshptijgkouv.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRlaWN4eXRnd3NocHRpamdrb3V2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQyMTI5NTEsImV4cCI6MjA5OTc4ODk1MX0.oibKnMAnhnA7EJwu7OTVMASRfSC3n85EJp7LugJzRaU';
@@ -179,7 +179,7 @@
     }
 
     // ================================================
-    // LEADERBOARD DENGAN SUPABASE (SUDAH TERINTEGRASI)
+    // LEADERBOARD DENGAN SUPABASE (TANPA DUPLIKAT)
     // ================================================
     const RANKING_KEY = 'belajarBacaRanking';
     let currentPlayerName = '';
@@ -202,6 +202,7 @@
     const exportModalBtn = document.getElementById('exportModalBtn');
     const deleteDataBtn = document.getElementById('deleteDataBtn');
 
+    // ===== AMBIL DATA DARI SUPABASE =====
     async function getRanking() {
         try {
             const url = `${SUPABASE_URL}/rest/v1/leaderboard?select=*&order=score.desc&limit=100`;
@@ -225,11 +226,24 @@
         }
     }
 
+    // ===== SIMPAN KE SUPABASE (HAPUS DULU DATA LAMA UNTUK NAMA TERSEBUT) =====
     async function saveRankingToSupabase(ranking) {
         try {
+            // Hapus semua data lama di Supabase (agar tidak duplikat)
+            // Tapi lebih aman: hapus per nama yang ada di ranking
             for (const item of ranking) {
-                const upsertUrl = `${SUPABASE_URL}/rest/v1/leaderboard`;
-                const response = await fetch(upsertUrl, {
+                // Hapus data dengan nama yang sama
+                const deleteUrl = `${SUPABASE_URL}/rest/v1/leaderboard?name=eq.${encodeURIComponent(item.name)}`;
+                await fetch(deleteUrl, {
+                    method: 'DELETE',
+                    headers: {
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                    }
+                });
+                // Insert data baru
+                const insertUrl = `${SUPABASE_URL}/rest/v1/leaderboard`;
+                const response = await fetch(insertUrl, {
                     method: 'POST',
                     headers: {
                         'apikey': SUPABASE_ANON_KEY,
@@ -245,7 +259,7 @@
                     })
                 });
                 if (!response.ok) {
-                    console.warn(`⚠️ Gagal upsert data untuk ${item.name}:`, response.status);
+                    console.warn(`⚠️ Gagal insert data untuk ${item.name}:`, response.status);
                 }
             }
             console.log('✅ Data leaderboard berhasil disimpan ke Supabase');
@@ -255,24 +269,41 @@
         }
     }
 
+    // ===== UPDATE RANKING (TANPA DUPLIKAT) =====
     async function updateRanking(name, score, level) {
         let ranking = await getRanking();
+        
+        // Cari apakah nama sudah ada
         const existing = ranking.find(item => item.name.toLowerCase() === name.toLowerCase());
         if (existing) {
+            // Update skor jika lebih tinggi
             if (score > existing.score) {
                 existing.score = score;
                 existing.level = level;
                 existing.created_at = new Date().toISOString();
+                console.log(`🔄 Update skor ${name}: ${score}`);
+            } else {
+                console.log(`⏩ Skor ${name} tidak berubah (${score} <= ${existing.score})`);
             }
         } else {
+            // Tambah baru
             ranking.push({ name, score, level, created_at: new Date().toISOString() });
+            console.log(`➕ Tambah pemain baru: ${name} (${score})`);
         }
+        
+        // Urutkan dari skor tertinggi
         ranking.sort((a, b) => b.score - a.score);
+        
+        // Simpan ke Supabase
         await saveRankingToSupabase(ranking);
+        
+        // Backup ke localStorage
         localStorage.setItem(RANKING_KEY, JSON.stringify(ranking));
+        
         return ranking;
     }
 
+    // ===== RENDER LEADERBOARD =====
     async function renderLeaderboard() {
         const ranking = await getRanking();
         if (ranking.length === 0) {
@@ -294,6 +325,7 @@
         leaderboardList.innerHTML = html;
     }
 
+    // ===== EXPORT XLS =====
     async function exportLeaderboardToXLS() {
         const password = prompt('Masukkan password untuk ekspor data:');
         if (password !== 'katakatasule') {
@@ -321,6 +353,7 @@
         alert('✅ Data berhasil diekspor!');
     }
 
+    // ===== OPEN/CLOSE LEADERBOARD =====
     async function openLeaderboard() {
         await renderLeaderboard();
         leaderboardModal.classList.add('active');
@@ -337,38 +370,44 @@
         if (e.target === this) closeLeaderboard();
     });
 
-    deleteDataBtn.addEventListener('click', async function() {
+    // ===== HAPUS DATA (PASSWORD) =====
+    async function deleteAllData() {
         const password = prompt('Masukkan password untuk menghapus semua data peringkat:');
-        if (password === 'katakatasule') {
-            if (confirm('Yakin ingin menghapus semua data peringkat?')) {
-                try {
-                    const deleteUrl = `${SUPABASE_URL}/rest/v1/leaderboard?name=neq.null`;
-                    await fetch(deleteUrl, {
-                        method: 'DELETE',
-                        headers: {
-                            'apikey': SUPABASE_ANON_KEY,
-                            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
-                        }
-                    });
-                    console.log('✅ Data di Supabase dihapus');
-                } catch (e) {
-                    console.warn('⚠️ Gagal hapus dari Supabase:', e);
-                }
-                localStorage.removeItem(RANKING_KEY);
-                await renderLeaderboard();
-                alert('✅ Semua data peringkat telah dihapus!');
-            }
-        } else if (password !== null) {
-            alert('❌ Password salah! Data tidak dihapus.');
+        if (password !== 'katakatasule') {
+            if (password !== null) alert('❌ Password salah! Data tidak dihapus.');
+            return;
         }
-    });
+        if (!confirm('Yakin ingin menghapus semua data peringkat?')) return;
+        
+        try {
+            // Hapus semua data di Supabase
+            const deleteUrl = `${SUPABASE_URL}/rest/v1/leaderboard?name=neq.null`;
+            await fetch(deleteUrl, {
+                method: 'DELETE',
+                headers: {
+                    'apikey': SUPABASE_ANON_KEY,
+                    'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                }
+            });
+            console.log('✅ Data di Supabase dihapus');
+        } catch (e) {
+            console.warn('⚠️ Gagal hapus dari Supabase:', e);
+        }
+        // Hapus localStorage
+        localStorage.removeItem(RANKING_KEY);
+        await renderLeaderboard();
+        alert('✅ Semua data peringkat telah dihapus!');
+    }
 
-    deleteRankingBtn.addEventListener('click', deleteDataBtn.click);
+    deleteDataBtn.addEventListener('click', deleteAllData);
+    deleteRankingBtn.addEventListener('click', deleteAllData);
 
     exportLeaderboardBtn.addEventListener('click', exportLeaderboardToXLS);
     exportModalBtn.addEventListener('click', exportLeaderboardToXLS);
 
-    // ===== START GAME =====
+    // ================================================
+    // START GAME
+    // ================================================
     function startGame() {
         const name = playerNameInput.value.trim();
         if (!name) {
@@ -413,7 +452,9 @@
     const confettiContainer = document.getElementById('confetti-container');
     const bgVideo = document.getElementById('bgVideo');
 
-    // Video functions
+    // ================================================
+    // FUNGSI VIDEO
+    // ================================================
     function playVideo(src, duration = 4000) {
         if (!bgVideo) {
             console.warn('⚠️ Elemen video tidak ditemukan!');
@@ -464,7 +505,9 @@
         setTimeout(() => overlay.remove(), 2000);
     }
 
-    // Sparkle & confetti
+    // ================================================
+    // SPARKLE & CONFETTI
+    // ================================================
     function createSparkles(x, y, count = 8) {
         const emojis = ['✨', '⭐', '🌟', '💫'];
         for (let i = 0; i < count; i++) {
@@ -502,6 +545,9 @@
         }
     }
 
+    // ================================================
+    // UPDATE GAMBAR
+    // ================================================
     function updateObjectImage(word, emoji) {
         objectImage.innerHTML = `<span class="loading-placeholder">🔍 Mencari gambar...</span>`;
         fetchPixabayImage(word, emoji)
@@ -529,6 +575,9 @@
             });
     }
 
+    // ================================================
+    // FUNGSI GAME
+    // ================================================
     function shuffleArray(arr) {
         for (let i=arr.length-1; i>0; i--) {
             const j = Math.floor(Math.random() * (i+1));
@@ -570,6 +619,9 @@
         animationFrameId = requestAnimationFrame(animateFloating);
     }
 
+    // ================================================
+    // LOAD WORD
+    // ================================================
     async function loadWord() {
         stopVideo();
         const levelData = LEVELS[currentLevel];
@@ -676,6 +728,9 @@
         }
     }
 
+    // ================================================
+    // CEK JAWABAN
+    // ================================================
     async function checkAnswer() {
         if (isProcessing) return;
         const userAnswer = answerSlots.join('');
