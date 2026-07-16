@@ -5,6 +5,12 @@
     const PIXABAY_API_KEY = '56708277-1122a65ab11fe5066b2a03f65';
 
     // ================================================
+    // SUPABASE CONFIG (sudah diisi dengan credentialmu)
+    // ================================================
+    const SUPABASE_URL = 'https://deicxytgwshptijgkouv.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRlaWN4eXRnd3NocHRpamdrb3V2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQyMTI5NTEsImV4cCI6MjA5OTc4ODk1MX0.oibKnMAnhnA7EJwu7OTVMASRfSC3n85EJp7LugJzRaU';
+
+    // ================================================
     // DATA LEVEL & KATA
     // ================================================
     const LEVELS = [
@@ -98,7 +104,7 @@
     }
 
     // ================================================
-    // MUSIK (sudah diperbaiki dengan error detail)
+    // MUSIK
     // ================================================
     const bgMusic = document.getElementById('bgMusic');
     const musicControl = document.getElementById('musicControl');
@@ -108,7 +114,6 @@
         bgMusic.volume = 0.3;
         bgMusic.loop = true;
 
-        // Fungsi play dengan error detail
         function playMusic() {
             return bgMusic.play().then(() => {
                 musicPlaying = true;
@@ -116,10 +121,9 @@
                 console.log('✅ Musik berhasil diputar');
             }).catch(err => {
                 console.warn('❌ Gagal memutar musik:', err.message);
-                // Jika file tidak ditemukan, coba reload sumber audio
                 if (err.name === 'NotSupportedError' || err.message.includes('404') || err.message.includes('Failed to load')) {
                     console.warn('🔄 Coba reload audio source...');
-                    bgMusic.load(); // reload src
+                    bgMusic.load();
                     return bgMusic.play().then(() => {
                         musicPlaying = true;
                         if (musicControl) musicControl.textContent = '🔊';
@@ -133,14 +137,12 @@
             });
         }
 
-        // Coba autoplay
         playMusic().catch(() => {
             musicPlaying = false;
             if (musicControl) musicControl.textContent = '🔇';
             console.log('🔇 Autoplay diblokir, tunggu klik user');
         });
 
-        // Tombol kontrol musik
         if (musicControl) {
             musicControl.addEventListener('click', function(e) {
                 e.stopPropagation();
@@ -155,19 +157,17 @@
             });
         }
 
-        // Jika user klik di mana saja dan musik masih pause, mulai musik
         let musicStarted = false;
         document.addEventListener('click', function startMusicOnClick() {
             if (!musicStarted && bgMusic.paused) {
                 musicStarted = true;
                 playMusic().catch(() => {
-                    musicStarted = false; // jika gagal, coba lagi nanti
+                    musicStarted = false;
                 });
                 document.removeEventListener('click', startMusicOnClick);
             }
         });
 
-        // Retry jika ada klik lain (hanya sekali)
         document.addEventListener('click', function retryMusic() {
             if (bgMusic.paused && !musicPlaying) {
                 playMusic().catch(() => {});
@@ -179,7 +179,7 @@
     }
 
     // ================================================
-    // LEADERBOARD & USER
+    // LEADERBOARD DENGAN SUPABASE (SUDAH TERINTEGRASI)
     // ================================================
     const RANKING_KEY = 'belajarBacaRanking';
     let currentPlayerName = '';
@@ -202,37 +202,79 @@
     const exportModalBtn = document.getElementById('exportModalBtn');
     const deleteDataBtn = document.getElementById('deleteDataBtn');
 
-    function getRanking() {
+    async function getRanking() {
         try {
-            const data = localStorage.getItem(RANKING_KEY);
-            return data ? JSON.parse(data) : [];
-        } catch {
-            return [];
+            const url = `${SUPABASE_URL}/rest/v1/leaderboard?select=*&order=score.desc&limit=100`;
+            const response = await fetch(url, {
+                headers: {
+                    'apikey': SUPABASE_ANON_KEY,
+                    'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                }
+            });
+            if (!response.ok) throw new Error('Failed to fetch ranking');
+            const data = await response.json();
+            return data || [];
+        } catch (error) {
+            console.warn('⚠️ Gagal ambil data dari Supabase, pakai localStorage:', error);
+            try {
+                const local = localStorage.getItem(RANKING_KEY);
+                return local ? JSON.parse(local) : [];
+            } catch {
+                return [];
+            }
         }
     }
 
-    function saveRanking(ranking) {
-        localStorage.setItem(RANKING_KEY, JSON.stringify(ranking));
+    async function saveRankingToSupabase(ranking) {
+        try {
+            for (const item of ranking) {
+                const upsertUrl = `${SUPABASE_URL}/rest/v1/leaderboard`;
+                const response = await fetch(upsertUrl, {
+                    method: 'POST',
+                    headers: {
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'Content-Type': 'application/json',
+                        'Prefer': 'return=minimal'
+                    },
+                    body: JSON.stringify({
+                        name: item.name,
+                        score: item.score,
+                        level: item.level,
+                        created_at: item.created_at || new Date().toISOString()
+                    })
+                });
+                if (!response.ok) {
+                    console.warn(`⚠️ Gagal upsert data untuk ${item.name}:`, response.status);
+                }
+            }
+            console.log('✅ Data leaderboard berhasil disimpan ke Supabase');
+        } catch (error) {
+            console.warn('⚠️ Gagal simpan ke Supabase, simpan ke localStorage:', error);
+            localStorage.setItem(RANKING_KEY, JSON.stringify(ranking));
+        }
     }
 
-    function updateRanking(name, score, level) {
-        let ranking = getRanking();
+    async function updateRanking(name, score, level) {
+        let ranking = await getRanking();
         const existing = ranking.find(item => item.name.toLowerCase() === name.toLowerCase());
         if (existing) {
             if (score > existing.score) {
                 existing.score = score;
                 existing.level = level;
-                existing.date = new Date().toISOString();
+                existing.created_at = new Date().toISOString();
             }
         } else {
-            ranking.push({ name, score, level, date: new Date().toISOString() });
+            ranking.push({ name, score, level, created_at: new Date().toISOString() });
         }
         ranking.sort((a, b) => b.score - a.score);
-        saveRanking(ranking);
+        await saveRankingToSupabase(ranking);
+        localStorage.setItem(RANKING_KEY, JSON.stringify(ranking));
+        return ranking;
     }
 
-    function renderLeaderboard() {
-        const ranking = getRanking();
+    async function renderLeaderboard() {
+        const ranking = await getRanking();
         if (ranking.length === 0) {
             leaderboardList.innerHTML = `<p style="color:rgba(255,255,255,0.6); text-align:center;">Belum ada data. Mulai bermain dulu!</p>`;
             return;
@@ -252,14 +294,13 @@
         leaderboardList.innerHTML = html;
     }
 
-    // Export XLS
-    function exportLeaderboardToXLS() {
+    async function exportLeaderboardToXLS() {
         const password = prompt('Masukkan password untuk ekspor data:');
         if (password !== 'katakatasule') {
             if (password !== null) alert('❌ Password salah! Ekspor dibatalkan.');
             return;
         }
-        const ranking = getRanking();
+        const ranking = await getRanking();
         if (ranking.length === 0) {
             alert('Belum ada data untuk diekspor.');
             return;
@@ -280,9 +321,8 @@
         alert('✅ Data berhasil diekspor!');
     }
 
-    // Leaderboard modal
-    function openLeaderboard() {
-        renderLeaderboard();
+    async function openLeaderboard() {
+        await renderLeaderboard();
         leaderboardModal.classList.add('active');
     }
 
@@ -297,13 +337,25 @@
         if (e.target === this) closeLeaderboard();
     });
 
-    // Hapus data
-    deleteDataBtn.addEventListener('click', function() {
+    deleteDataBtn.addEventListener('click', async function() {
         const password = prompt('Masukkan password untuk menghapus semua data peringkat:');
         if (password === 'katakatasule') {
             if (confirm('Yakin ingin menghapus semua data peringkat?')) {
-                saveRanking([]);
-                renderLeaderboard();
+                try {
+                    const deleteUrl = `${SUPABASE_URL}/rest/v1/leaderboard?name=neq.null`;
+                    await fetch(deleteUrl, {
+                        method: 'DELETE',
+                        headers: {
+                            'apikey': SUPABASE_ANON_KEY,
+                            'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                        }
+                    });
+                    console.log('✅ Data di Supabase dihapus');
+                } catch (e) {
+                    console.warn('⚠️ Gagal hapus dari Supabase:', e);
+                }
+                localStorage.removeItem(RANKING_KEY);
+                await renderLeaderboard();
                 alert('✅ Semua data peringkat telah dihapus!');
             }
         } else if (password !== null) {
@@ -311,18 +363,7 @@
         }
     });
 
-    deleteRankingBtn.addEventListener('click', function() {
-        const password = prompt('Masukkan password untuk menghapus semua data peringkat:');
-        if (password === 'katakatasule') {
-            if (confirm('Yakin ingin menghapus semua data peringkat?')) {
-                saveRanking([]);
-                renderLeaderboard();
-                alert('✅ Semua data peringkat telah dihapus!');
-            }
-        } else if (password !== null) {
-            alert('❌ Password salah! Data tidak dihapus.');
-        }
-    });
+    deleteRankingBtn.addEventListener('click', deleteDataBtn.click);
 
     exportLeaderboardBtn.addEventListener('click', exportLeaderboardToXLS);
     exportModalBtn.addEventListener('click', exportLeaderboardToXLS);
@@ -373,44 +414,57 @@
     const bgVideo = document.getElementById('bgVideo');
 
     // Video functions
-function playVideo(src, duration = 4000) {
-    if (!bgVideo) return;
-    if (currentTimeout) clearTimeout(currentTimeout);
-
-    bgVideo.loop = false;
-    bgVideo.pause();
-    bgVideo.src = src;
-    bgVideo.load();
-
-    // Tunggu video siap diputar
-    bgVideo.addEventListener('canplaythrough', function playHandler() {
-        bgVideo.removeEventListener('canplaythrough', playHandler);
+    function playVideo(src, duration = 4000) {
+        if (!bgVideo) {
+            console.warn('⚠️ Elemen video tidak ditemukan!');
+            return;
+        }
+        if (currentTimeout) clearTimeout(currentTimeout);
+        bgVideo.loop = false;
+        bgVideo.pause();
+        bgVideo.src = src;
+        bgVideo.load();
         bgVideo.muted = false;
         bgVideo.volume = 0.8;
-        bgVideo.play().catch(e => console.warn('Video play error:', e));
-    });
-
-    currentTimeout = setTimeout(() => {
-        bgVideo.pause();
-        bgVideo.src = 'backdroputama.mp4';
-        bgVideo.load();
-        bgVideo.loop = true;
-        bgVideo.muted = true;
-        bgVideo.play().catch(() => {});
-        currentTimeout = null;
-    }, duration);
-}
+        console.log(`🎬 Memutar video: ${src}`);
+        bgVideo.play()
+            .then(() => console.log(`✅ Video ${src} berhasil diputar`))
+            .catch(e => console.warn(`❌ Gagal memutar video ${src}:`, e.message));
+        currentTimeout = setTimeout(() => {
+            bgVideo.pause();
+            bgVideo.src = 'backdroputama.mp4';
+            bgVideo.load();
+            bgVideo.loop = true;
+            bgVideo.muted = true;
+            bgVideo.volume = 0.5;
+            bgVideo.play().catch(() => {});
+            currentTimeout = null;
+        }, duration);
+    }
 
     function stopVideo() {
         if (currentTimeout) clearTimeout(currentTimeout);
+        if (!bgVideo) return;
         bgVideo.pause();
         bgVideo.src = 'backdroputama.mp4';
         bgVideo.load();
         bgVideo.loop = true;
         bgVideo.muted = true;
-        bgVideo.play().catch(e => console.warn('Idle video play error:', e));
+        bgVideo.volume = 0.5;
+        bgVideo.play().catch(() => {});
     }
 
+    function showLevelUp(level) {
+        const overlay = document.createElement('div');
+        overlay.className = 'level-up-overlay';
+        overlay.innerHTML = `<div class="level-up-box"><h1>🎉 LEVEL ${level} 🎉</h1><p>✨ Kamu Hebat! ✨</p></div>`;
+        document.body.appendChild(overlay);
+        fireConfetti(50);
+        playVideo('backdropnaiklevel.mp4', 5000);
+        setTimeout(() => overlay.remove(), 2000);
+    }
+
+    // Sparkle & confetti
     function createSparkles(x, y, count = 8) {
         const emojis = ['✨', '⭐', '🌟', '💫'];
         for (let i = 0; i < count; i++) {
@@ -446,23 +500,6 @@ function playVideo(src, duration = 4000) {
             confettiContainer.appendChild(piece);
             setTimeout(() => piece.remove(), 5000);
         }
-    }
-
-    function showLevelUp(level) {
-        console.log(`🎉 Level Up! Level ${level} - Putar video backdropnaiklevel.mp4`);
-        
-        const overlay = document.createElement('div');
-        overlay.className = 'level-up-overlay';
-        overlay.innerHTML = `<div class="level-up-box"><h1>🎉 LEVEL ${level} 🎉</h1><p>✨ Kamu Hebat! ✨</p></div>`;
-        document.body.appendChild(overlay);
-        fireConfetti(50);
-        
-        // Putar backdrop naik level (5 detik)
-        playVideo('backdropnaiklevel.mp4', 5000);
-        
-        setTimeout(() => {
-            overlay.remove();
-        }, 2000);
     }
 
     function updateObjectImage(word, emoji) {
@@ -533,7 +570,7 @@ function playVideo(src, duration = 4000) {
         animationFrameId = requestAnimationFrame(animateFloating);
     }
 
-    function loadWord() {
+    async function loadWord() {
         stopVideo();
         const levelData = LEVELS[currentLevel];
         if (currentWordIndex >= levelData.words.length) {
@@ -548,14 +585,14 @@ function playVideo(src, duration = 4000) {
                 messageBox.innerText = '🏆 Hore! Kamu sudah belajar banyak! 🎉';
                 messageBox.className = 'message correct';
                 fireConfetti(60);
-                updateRanking(currentPlayerName, score, currentLevel + 1);
+                await updateRanking(currentPlayerName, score, currentLevel + 1);
                 currentLevel = 0;
                 currentWordIndex = 0;
                 score = 0;
                 updateScoreAndLevel();
                 setTimeout(() => messageBox.className = 'message', 2000);
             }
-            updateRanking(currentPlayerName, score, currentLevel + 1);
+            await updateRanking(currentPlayerName, score, currentLevel + 1);
         }
         const newData = LEVELS[currentLevel];
         currentWord = newData.words[currentWordIndex];
@@ -639,14 +676,14 @@ function playVideo(src, duration = 4000) {
         }
     }
 
-    function checkAnswer() {
+    async function checkAnswer() {
         if (isProcessing) return;
         const userAnswer = answerSlots.join('');
         if (userAnswer === currentWord) {
             isProcessing = true;
             score += 10;
             updateScoreAndLevel();
-            updateRanking(currentPlayerName, score, currentLevel + 1);
+            await updateRanking(currentPlayerName, score, currentLevel + 1);
             messageBox.innerText = `✅ Benar! +10 poin 🎉`;
             messageBox.className = 'message correct';
             fireConfetti(25);
