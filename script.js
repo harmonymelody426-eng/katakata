@@ -648,30 +648,114 @@
         `;
         videoEl.load();
         videoEl.play().catch(e => console.warn('⚠️ Video naik level error:', e));
+    // ================================================
+    // LEVEL UP (VIDEO DI BELAKANG OVERLAY) - POSISI ATAS UNTUK HP
+    // ================================================
+    function showLevelUp(level) {
+        // 1. Hentikan video idle sementara
+        if (bgVideo) {
+            bgVideo.pause();
+        }
+
+        // Deteksi HP
+        const isMobile = window.innerWidth < 768;
+
+        // 2. Buat overlay
+        const overlay = document.createElement('div');
+        overlay.className = 'level-up-overlay';
+        overlay.style.cssText = `
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 1000;
+            background: rgba(0,0,0,0.3);
+            display: flex;
+            align-items: ${isMobile ? 'flex-start' : 'center'};
+            justify-content: center;
+            flex-direction: column;
+            animation: fadeIn 0.5s ease;
+            padding-top: ${isMobile ? '10vh' : '0'};
+        `;
+
+        // 3. Video di dalam overlay
+        const videoWrapper = document.createElement('div');
+        videoWrapper.style.cssText = `
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 0;
+            overflow: hidden;
+        `;
+
+        const videoEl = document.createElement('video');
+        videoEl.src = getVideoFile('backdropnaiklevel');
+        videoEl.autoplay = true;
+        videoEl.muted = false;
+        videoEl.volume = 0.8;
+        videoEl.playsInline = true;
+        videoEl.style.cssText = `
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            position: absolute;
+            top: 0;
+            left: 0;
+        `;
+        videoEl.load();
+        videoEl.play().catch(e => console.warn('⚠️ Video naik level error:', e));
 
         videoWrapper.appendChild(videoEl);
         overlay.appendChild(videoWrapper);
 
-        // 4. Buat konten teks (di atas video)
+        // 4. Konten teks level up (POSISI LEBIH ATAS UNTUK HP)
         const content = document.createElement('div');
         content.style.cssText = `
             position: relative;
             z-index: 1;
             text-align: center;
-            padding: 30px 50px;
+            padding: ${isMobile ? '10px 20px' : '30px 50px'};
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
         `;
+
+        // Ukuran font lebih kecil untuk HP
+        const titleSize = isMobile ? '2rem' : '3.5rem';
+        const subtitleSize = isMobile ? '1rem' : '1.8rem';
+        const paddingBox = isMobile ? '15px 25px' : '30px 50px';
+        const borderRadius = isMobile ? '60px 20px 60px 20px' : '120px 40px 120px 40px';
+        const shadowSize = isMobile ? '0 20px 30px rgba(0,0,0,0.5), 0 0 0 3px #fff3c0, 0 0 0 6px rgba(180,124,78,0.6)' : '0 30px 40px rgba(0,0,0,0.5), 0 0 0 6px #fff3c0, 0 0 0 12px rgba(180,124,78,0.6)';
+
         content.innerHTML = `
             <div class="level-up-box" style="
                 background: linear-gradient(145deg, #ffe485, #f5b64b);
-                padding: 30px 50px;
-                border-radius: 120px 40px 120px 40px;
-                box-shadow: 0 30px 40px rgba(0,0,0,0.5), 0 0 0 6px #fff3c0, 0 0 0 12px rgba(180,124,78,0.6);
+                padding: ${paddingBox};
+                border-radius: ${borderRadius};
+                box-shadow: ${shadowSize};
                 text-align: center;
-                border: 4px solid #faeac9;
+                border: 3px solid #faeac9;
                 font-family: 'Luckiest Guy', 'Comic Sans MS', cursive;
+                display: inline-block;
+                margin: 0 auto;
             ">
-                <h1 style="font-size: 3.5rem; color: #2d1f0c; text-shadow: 0 6px 0 #b87d3a; letter-spacing: 4px; font-weight: 400;">🎉 LEVEL ${level} 🎉</h1>
-                <p style="font-size: 1.8rem; color: #3d2b12; font-weight: 400; margin-top: 8px; font-family: 'Segoe UI', 'Comic Sans MS', cursive;">✨ Kamu Hebat! ✨</p>
+                <h1 style="
+                    font-size: ${titleSize}; 
+                    color: #2d1f0c; 
+                    text-shadow: 0 3px 0 #b87d3a; 
+                    letter-spacing: 2px; 
+                    font-weight: 400; 
+                    margin: 0;
+                    line-height: 1.2;
+                ">🎉 LEVEL ${level} 🎉</h1>
+                <p style="
+                    font-size: ${subtitleSize}; 
+                    color: #3d2b12; 
+                    font-weight: 400; 
+                    margin-top: 2px; 
+                    font-family: 'Segoe UI', 'Comic Sans MS', cursive;
+                    letter-spacing: 1px;
+                ">✨ Kamu Hebat! ✨</p>
             </div>
         `;
         overlay.appendChild(content);
@@ -680,13 +764,11 @@
         document.body.appendChild(overlay);
         fireConfetti(50);
 
-        // 6. Hapus overlay setelah 5 detik (durasi video)
+        // 6. Hapus overlay setelah 5 detik
         const overlayTimeout = setTimeout(() => {
-            // Hentikan video
             videoEl.pause();
             videoEl.src = '';
             overlay.remove();
-            // Kembali ke video idle
             if (bgVideo) {
                 const idleFile = getVideoFile('backdroputama');
                 bgVideo.src = idleFile;
@@ -698,7 +780,6 @@
             }
         }, 5000);
 
-        // Simpan timeout agar bisa dibersihkan jika perlu
         if (window._levelUpTimeout) {
             clearTimeout(window._levelUpTimeout);
         }
