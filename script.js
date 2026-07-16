@@ -784,6 +784,118 @@
                 ">✨ Kamu Hebat! ✨</p>
             </div>
         `;
+    // ================================================
+    // LEVEL UP (VIDEO DI LAYER PALING DEPAN - TEKS DI ATAS)
+    // ================================================
+    function showLevelUp(level) {
+        // 1. Hentikan video idle sementara
+        if (bgVideo) {
+            bgVideo.pause();
+        }
+
+        // Deteksi HP
+        const isMobile = window.innerWidth < 768;
+
+        // 2. Buat overlay
+        const overlay = document.createElement('div');
+        overlay.className = 'level-up-overlay';
+        overlay.style.cssText = `
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 2000;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            flex-direction: column;
+            animation: fadeIn 0.5s ease;
+            background: rgba(0,0,0,0.2);
+            padding-top: ${isMobile ? '8vh' : '12vh'};
+        `;
+
+        // 3. Video di layer PALING DEPAN
+        const videoWrapper = document.createElement('div');
+        videoWrapper.style.cssText = `
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            z-index: 10;
+            overflow: hidden;
+        `;
+
+        const videoEl = document.createElement('video');
+        videoEl.src = getVideoFile('backdropnaiklevel');
+        videoEl.autoplay = true;
+        videoEl.muted = false;
+        videoEl.volume = 0.8;
+        videoEl.playsInline = true;
+        videoEl.style.cssText = `
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            position: absolute;
+            top: 0;
+            left: 0;
+        `;
+        videoEl.load();
+        videoEl.play().catch(e => console.warn('⚠️ Video naik level error:', e));
+
+        videoWrapper.appendChild(videoEl);
+        overlay.appendChild(videoWrapper);
+
+        // 4. Konten teks level up (di ATAS video, posisi di top)
+        const content = document.createElement('div');
+        content.style.cssText = `
+            position: relative;
+            z-index: 20;
+            text-align: center;
+            padding: ${isMobile ? '10px 20px' : '20px 40px'};
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            pointer-events: none;
+        `;
+
+        // Ukuran font lebih kecil untuk HP
+        const titleSize = isMobile ? '2rem' : '3.5rem';
+        const subtitleSize = isMobile ? '1rem' : '1.8rem';
+        const paddingBox = isMobile ? '15px 25px' : '30px 50px';
+        const borderRadius = isMobile ? '60px 20px 60px 20px' : '120px 40px 120px 40px';
+        const shadowSize = isMobile ? '0 20px 30px rgba(0,0,0,0.5), 0 0 0 3px #fff3c0, 0 0 0 6px rgba(180,124,78,0.6)' : '0 30px 40px rgba(0,0,0,0.5), 0 0 0 6px #fff3c0, 0 0 0 12px rgba(180,124,78,0.6)';
+
+        content.innerHTML = `
+            <div class="level-up-box" style="
+                background: linear-gradient(145deg, #ffe485, #f5b64b);
+                padding: ${paddingBox};
+                border-radius: ${borderRadius};
+                box-shadow: ${shadowSize};
+                text-align: center;
+                border: 3px solid #faeac9;
+                font-family: 'Luckiest Guy', 'Comic Sans MS', cursive;
+                display: inline-block;
+                margin: 0 auto;
+                pointer-events: auto;
+            ">
+                <h1 style="
+                    font-size: ${titleSize}; 
+                    color: #2d1f0c; 
+                    text-shadow: 0 3px 0 #b87d3a; 
+                    letter-spacing: 2px; 
+                    font-weight: 400; 
+                    margin: 0;
+                    line-height: 1.2;
+                ">🎉 LEVEL ${level} 🎉</h1>
+                <p style="
+                    font-size: ${subtitleSize}; 
+                    color: #3d2b12; 
+                    font-weight: 400; 
+                    margin-top: 2px; 
+                    font-family: 'Segoe UI', 'Comic Sans MS', cursive;
+                    letter-spacing: 1px;
+                ">✨ Kamu Hebat! ✨</p>
+            </div>
+        `;
         overlay.appendChild(content);
 
         // 5. Tambahkan ke body
