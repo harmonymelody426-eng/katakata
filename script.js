@@ -45,12 +45,9 @@
                 resolve(imageCache[word]);
                 return;
             }
-
             const query = WORD_QUERY_MAP[word] || word;
             const url = `https://pixabay.com/api/?key=${PIXABAY_API_KEY}&q=${encodeURIComponent(query)}&image_type=photo&lang=en&per_page=10&safesearch=true&orientation=horizontal&min_width=400&min_height=300`;
-
             console.log(`🔍 Mencari: "${query}" untuk kata "${word}"`);
-
             fetch(url)
                 .then(response => {
                     if (!response.ok) throw new Error('Network response was not ok');
@@ -101,54 +98,16 @@
     }
 
     // ================================================
-    // MUSIK
+    // MUSIK (sudah diperbaiki, no duplicate)
     // ================================================
     const bgMusic = document.getElementById('bgMusic');
     const musicControl = document.getElementById('musicControl');
-    let musicPlaying = true;
+    let musicPlaying = false;
 
     if (bgMusic) {
         bgMusic.volume = 0.3;
-        bgMusic.play().catch(() => {
-            console.log('Autoplay blocked, user will click to start');
-            musicPlaying = false;
-            if (musicControl) musicControl.textContent = '🔇';
-        });
 
-        if (musicControl) {
-            musicControl.addEventListener('click', function(e) {
-                e.stopPropagation();
-                if (bgMusic.paused) {
-                    bgMusic.play().catch(() => {});
-                    musicControl.textContent = '🔊';
-                    musicPlaying = true;
-                } else {
-                    bgMusic.pause();
-                    musicControl.textContent = '🔇';
-                    musicPlaying = false;
-                }
-            });
-        }
-
-        document.addEventListener('click', function() {
-            if (bgMusic.paused && !musicPlaying) {
-                bgMusic.play().catch(() => {});
-                if (musicControl) musicControl.textContent = '🔊';
-                musicPlaying = true;
-            }
-        }, { once: true });
-    }    // ================================================
-    // MUSIK
-    // ================================================
-    const bgMusic = document.getElementById('bgMusic');
-    const musicControl = document.getElementById('musicControl');
-    let musicPlaying = false; // default false sampai user interaksi
-
-    if (bgMusic) {
-        // Set volume
-        bgMusic.volume = 0.3;
-
-        // Coba mulai musik (autoplay)
+        // Coba autoplay
         bgMusic.play().then(() => {
             musicPlaying = true;
             if (musicControl) musicControl.textContent = '🔊';
@@ -159,7 +118,7 @@
             if (musicControl) musicControl.textContent = '🔇';
         });
 
-        // Event listener tombol musik (toggle mute/unmute)
+        // Tombol kontrol musik
         if (musicControl) {
             musicControl.addEventListener('click', function(e) {
                 e.stopPropagation();
@@ -190,12 +149,11 @@
                 }).catch(() => {
                     console.warn('Gagal memutar musik setelah klik');
                 });
-                // Hapus listener setelah berhasil
                 document.removeEventListener('click', startMusicOnClick);
             }
         });
 
-        // Jika musik gagal diputar karena alasan lain, coba lagi saat user klik
+        // Retry jika ada klik lain
         document.addEventListener('click', function retryMusic() {
             if (bgMusic.paused && !musicPlaying) {
                 bgMusic.play().catch(() => {});
@@ -230,7 +188,6 @@
     const exportModalBtn = document.getElementById('exportModalBtn');
     const deleteDataBtn = document.getElementById('deleteDataBtn');
 
-    // Fungsi ranking
     function getRanking() {
         try {
             const data = localStorage.getItem(RANKING_KEY);
@@ -281,7 +238,7 @@
         leaderboardList.innerHTML = html;
     }
 
-    // ===== EXPORT KE XLS =====
+    // Export XLS
     function exportLeaderboardToXLS() {
         const password = prompt('Masukkan password untuk ekspor data:');
         if (password !== 'katakatasule') {
@@ -326,7 +283,7 @@
         if (e.target === this) closeLeaderboard();
     });
 
-    // Hapus data dari tombol pojok kiri
+    // Hapus data
     deleteDataBtn.addEventListener('click', function() {
         const password = prompt('Masukkan password untuk menghapus semua data peringkat:');
         if (password === 'katakatasule') {
@@ -353,7 +310,6 @@
         }
     });
 
-    // Ekspor
     exportLeaderboardBtn.addEventListener('click', exportLeaderboardToXLS);
     exportModalBtn.addEventListener('click', exportLeaderboardToXLS);
 
@@ -379,7 +335,7 @@
     });
 
     // ================================================
-    // GAME VARIABLES
+    // VARIABEL GAME
     // ================================================
     let currentLevel = 0, currentWordIndex = 0, score = 0;
     let currentWord = '', currentEmoji = '🐷';
@@ -402,7 +358,7 @@
     const confettiContainer = document.getElementById('confetti-container');
     const bgVideo = document.getElementById('bgVideo');
 
-    // Video functions (tetap)
+    // Video functions
     function playVideo(src, duration = 4000) {
         if (currentTimeout) clearTimeout(currentTimeout);
         bgVideo.loop = false;
@@ -417,7 +373,7 @@
             bgVideo.src = 'backdroputama.mp4';
             bgVideo.load();
             bgVideo.loop = true;
-            bgVideo.muted = true; // kembali muted agar autoplay tetap jalan
+            bgVideo.muted = true;
             bgVideo.play().catch(e => console.warn('Idle video play error:', e));
             currentTimeout = null;
         }, duration);
@@ -433,7 +389,6 @@
         bgVideo.play().catch(e => console.warn('Idle video play error:', e));
     }
 
-    // Sparkle & confetti (sama)
     function createSparkles(x, y, count = 8) {
         const emojis = ['✨', '⭐', '🌟', '💫'];
         for (let i = 0; i < count; i++) {
@@ -515,7 +470,6 @@
         return arr;
     }
 
-    // Floating letters
     function startFloating() {
         if (animationFrameId) cancelAnimationFrame(animationFrameId);
         const tiles = document.querySelectorAll('.letter-tile');
@@ -549,7 +503,6 @@
         animationFrameId = requestAnimationFrame(animateFloating);
     }
 
-    // Game core
     function loadWord() {
         stopVideo();
         const levelData = LEVELS[currentLevel];
@@ -701,7 +654,6 @@
     }
 
     function initGameAfterStart() {
-        // video background sudah autoplay karena di HTML
         currentLevel = 0;
         currentWordIndex = 0;
         score = 0;
