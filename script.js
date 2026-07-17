@@ -432,11 +432,12 @@
     const bgVideo = document.getElementById('bgVideo');
 
     // ================================================
-    // FUNGSI VIDEO (DENGAN DETEKSI HP)
+    // FUNGSI VIDEO (DIPERBAIKI UNTUK HP)
     // ================================================
     function getVideoFile(baseName) {
         const hpVersion = `${baseName}-hp.mp4`;
         const desktopVersion = `${baseName}.mp4`;
+        // Di HP, coba pakai versi HP, fallback ke desktop
         return isMobile ? hpVersion : desktopVersion;
     }
 
@@ -467,6 +468,7 @@
             })
             .catch(e => {
                 console.warn(`❌ Gagal memutar ${videoFile}:`, e.message);
+                // Jika gagal dan ini adalah versi HP, coba fallback ke desktop
                 if (videoFile.includes('-hp.mp4')) {
                     const fallbackFile = `${baseName}.mp4`;
                     console.warn(`🔄 Fallback ke ${fallbackFile}`);
@@ -513,7 +515,8 @@
 
     function initBackgroundVideo() {
         if (!bgVideo) return;
-        const idleFile = getVideoFile('backdroputama');
+        // Coba pakai video HP dulu, fallback ke desktop
+        let idleFile = getVideoFile('backdroputama');
         console.log(`📱 ${isMobile ? 'HP' : 'Desktop'} → 🎬 Load backdrop: ${idleFile}`);
         
         bgVideo.src = idleFile;
@@ -521,15 +524,27 @@
         bgVideo.loop = true;
         bgVideo.muted = true;
         bgVideo.volume = 0.5;
-        bgVideo.play().catch(e => {
-            console.warn('❌ Video play error:', e);
-            if (idleFile.includes('-hp.mp4')) {
-                console.warn('🔄 Fallback ke backdroputama.mp4');
-                bgVideo.src = 'backdroputama.mp4';
-                bgVideo.load();
-                bgVideo.play().catch(() => {});
-            }
-        });
+        
+        // Jika HP, coba play, kalau gagal fallback ke desktop
+        bgVideo.play()
+            .then(() => {
+                console.log('✅ Video background berhasil diputar');
+            })
+            .catch(e => {
+                console.warn('❌ Video play error:', e.message);
+                // Jika HP dan gagal, coba fallback ke desktop
+                if (idleFile.includes('-hp.mp4')) {
+                    console.warn('🔄 Fallback ke backdroputama.mp4');
+                    bgVideo.src = 'backdroputama.mp4';
+                    bgVideo.load();
+                    bgVideo.loop = true;
+                    bgVideo.muted = true;
+                    bgVideo.volume = 0.5;
+                    bgVideo.play().catch(err => {
+                        console.warn('❌ Fallback gagal:', err.message);
+                    });
+                }
+            });
     }
 
     // ================================================
@@ -602,7 +617,7 @@
             overlay.appendChild(box);
             document.body.appendChild(overlay);
 
-            // Animasi masuk (lebih cepat di HP)
+            // Animasi masuk
             setTimeout(() => {
                 overlay.style.opacity = '1';
                 box.style.transform = 'scale(1)';
@@ -653,7 +668,7 @@
     }
 
     // ================================================
-    // SPARKLE & CONFETTI (DENGAN LIMIT HP)
+    // SPARKLE & CONFETTI
     // ================================================
     function createSparkles(x, y, count = 8) {
         const emojis = ['✨', '⭐', '🌟', '💫'];
@@ -946,15 +961,13 @@
     }
 
     // ================================================
-    // RESIZE HANDLER (lebih ringan, tidak reload video terus)
+    // RESIZE HANDLER (RINGAN)
     // ================================================
     let resizeTimeout;
     window.addEventListener('resize', function() {
         clearTimeout(resizeTimeout);
         resizeTimeout = setTimeout(() => {
-            // Tidak reload video setiap resize, karena bisa berat di HP
-            // Hanya update jika benar-benar diperlukan
-            console.log('🔄 Resize detected, but video not reloaded');
+            console.log('🔄 Resize detected');
         }, 500);
     });
 
