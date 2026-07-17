@@ -512,6 +512,9 @@
         bgVideo.play().catch(() => {});
     }
 
+    // ================================================
+    // INIT BACKGROUND VIDEO (DEFINISIKAN SEBELUM DIPANGGIL)
+    // ================================================
     function initBackgroundVideo() {
         if (!bgVideo) return;
         const idleFile = getVideoFile('backdroputama');
@@ -535,10 +538,9 @@
     }
 
     // ================================================
-    // LEVEL UP - VERSI SEDERHANA (PASTI JALAN)
+    // LEVEL UP (VERSI SEDERHANA)
     // ================================================
     function showLevelUp(level) {
-        // Cegah multiple call
         if (window._levelUpActive) return;
         window._levelUpActive = true;
 
@@ -554,7 +556,6 @@
             const overlay = document.createElement('div');
             overlay.id = 'levelUpOverlay';
             
-            // Style overlay
             overlay.style.cssText = `
                 position: fixed;
                 top: 0;
@@ -571,13 +572,11 @@
                 transition: opacity 0.3s ease;
             `;
 
-            // Ukuran responsif
             const titleSize = isMobile ? '2rem' : '3.8rem';
             const subtitleSize = isMobile ? '1rem' : '2rem';
             const paddingBox = isMobile ? '16px 28px' : '35px 60px';
             const borderRadius = isMobile ? '50px 16px 50px 16px' : '120px 40px 120px 40px';
 
-            // Box level up
             const box = document.createElement('div');
             box.id = 'levelUpBox';
             box.style.cssText = `
