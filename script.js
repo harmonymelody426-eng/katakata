@@ -432,12 +432,14 @@
     const bgVideo = document.getElementById('bgVideo');
 
     // ================================================
-    // FUNGSI VIDEO (DIPERBAIKI UNTUK HP)
+    // FUNGSI VIDEO - DUKUNG .webm UNTUK HP
     // ================================================
     function getVideoFile(baseName) {
-        const hpVersion = `${baseName}-hp.mp4`;
-        const desktopVersion = `${baseName}.mp4`;
-        return isMobile ? hpVersion : desktopVersion;
+        // HP: pakai .webm (lebih ringan), Desktop: .mp4
+        if (isMobile) {
+            return `${baseName}.webm`;
+        }
+        return `${baseName}.mp4`;
     }
 
     function playVideo(baseName, duration = 4000) {
@@ -452,7 +454,7 @@
         }
 
         const videoFile = getVideoFile(baseName);
-        console.log(`📱 ${isMobile ? 'HP' : 'Desktop'} → 🎬 Memutar: ${videoFile}`);
+        console.log(`📱 ${isMobile ? 'HP (.webm)' : 'Desktop (.mp4)'} → 🎬 Memutar: ${videoFile}`);
 
         bgVideo.loop = false;
         bgVideo.pause();
@@ -467,15 +469,14 @@
             })
             .catch(e => {
                 console.warn(`❌ Gagal memutar ${videoFile}:`, e.message);
-                if (videoFile.includes('-hp.mp4')) {
-                    const fallbackFile = `${baseName}.mp4`;
-                    console.warn(`🔄 Fallback ke ${fallbackFile}`);
-                    bgVideo.src = fallbackFile;
-                    bgVideo.load();
-                    bgVideo.play().catch(err => {
-                        console.warn(`❌ Fallback gagal:`, err.message);
-                    });
-                }
+                // Fallback: coba format lain
+                const fallbackFile = isMobile ? `${baseName}.mp4` : `${baseName}.webm`;
+                console.warn(`🔄 Fallback ke ${fallbackFile}`);
+                bgVideo.src = fallbackFile;
+                bgVideo.load();
+                bgVideo.play().catch(err => {
+                    console.warn(`❌ Fallback gagal:`, err.message);
+                });
             });
 
         currentTimeout = setTimeout(() => {
@@ -514,7 +515,7 @@
     function initBackgroundVideo() {
         if (!bgVideo) return;
         let idleFile = getVideoFile('backdroputama');
-        console.log(`📱 ${isMobile ? 'HP' : 'Desktop'} → 🎬 Load backdrop: ${idleFile}`);
+        console.log(`📱 ${isMobile ? 'HP (.webm)' : 'Desktop (.mp4)'} → 🎬 Load backdrop: ${idleFile}`);
         
         bgVideo.src = idleFile;
         bgVideo.load();
@@ -528,17 +529,17 @@
             })
             .catch(e => {
                 console.warn('❌ Video play error:', e.message);
-                if (idleFile.includes('-hp.mp4')) {
-                    console.warn('🔄 Fallback ke backdroputama.mp4');
-                    bgVideo.src = 'backdroputama.mp4';
-                    bgVideo.load();
-                    bgVideo.loop = true;
-                    bgVideo.muted = true;
-                    bgVideo.volume = 0.5;
-                    bgVideo.play().catch(err => {
-                        console.warn('❌ Fallback gagal:', err.message);
-                    });
-                }
+                // Fallback ke format lain
+                const fallbackFile = isMobile ? 'backdroputama.mp4' : 'backdroputama.webm';
+                console.warn(`🔄 Fallback ke ${fallbackFile}`);
+                bgVideo.src = fallbackFile;
+                bgVideo.load();
+                bgVideo.loop = true;
+                bgVideo.muted = true;
+                bgVideo.volume = 0.5;
+                bgVideo.play().catch(err => {
+                    console.warn('❌ Fallback gagal:', err.message);
+                });
             });
     }
 
@@ -550,12 +551,10 @@
         window._levelUpActive = true;
 
         try {
-            // Pause video background sementara
             if (bgVideo) {
                 bgVideo.pause();
             }
 
-            // 1. Buat overlay utama (z-index 9999 = paling depan)
             const overlay = document.createElement('div');
             overlay.id = 'levelUpOverlay';
             overlay.style.cssText = `
@@ -573,7 +572,6 @@
                 overflow: hidden;
             `;
 
-            // 2. Video di dalam overlay (sebagai background, di belakang teks)
             const videoWrapper = document.createElement('div');
             videoWrapper.style.cssText = `
                 position: absolute;
@@ -599,12 +597,18 @@
                 left: 0;
             `;
             videoEl.load();
-            videoEl.play().catch(e => console.warn('⚠️ Video naik level error:', e));
+            videoEl.play().catch(e => {
+                console.warn('⚠️ Video naik level error:', e);
+                // Fallback ke format lain
+                const fallbackFile = isMobile ? 'backdropnaiklevel.mp4' : 'backdropnaiklevel.webm';
+                videoEl.src = fallbackFile;
+                videoEl.load();
+                videoEl.play().catch(err => console.warn('Fallback gagal:', err));
+            });
 
             videoWrapper.appendChild(videoEl);
             overlay.appendChild(videoWrapper);
 
-            // 3. Teks level up (di atas video, z-index lebih tinggi)
             const titleSize = isMobile ? '2rem' : '3.8rem';
             const subtitleSize = isMobile ? '1rem' : '2rem';
             const paddingBox = isMobile ? '16px 28px' : '35px 60px';
@@ -645,41 +649,33 @@
             `;
             overlay.appendChild(content);
 
-            // 4. Tambahkan ke body
             document.body.appendChild(overlay);
 
-            // 5. Animasi masuk (overlay fade in + teks scale)
             setTimeout(() => {
                 overlay.style.opacity = '1';
                 content.style.transform = 'scale(1)';
                 content.style.opacity = '1';
             }, 30);
 
-            // 6. Confetti (lebih sedikit di HP)
             const confettiCount = isMobile ? 20 : 40;
             setTimeout(() => {
                 fireConfetti(confettiCount);
             }, 200);
 
-            // 7. Hapus setelah 3 detik (agar video cukup terlihat)
             const duration = isMobile ? 3000 : 3500;
             setTimeout(() => {
                 try {
-                    // Animasi keluar
                     content.style.transform = 'scale(0.5)';
                     content.style.opacity = '0';
                     overlay.style.opacity = '0';
                     
                     setTimeout(() => {
-                        // Hentikan video
                         videoEl.pause();
                         videoEl.src = '';
-                        // Hapus overlay
                         if (overlay && overlay.parentNode) {
                             overlay.parentNode.removeChild(overlay);
                         }
                         window._levelUpActive = false;
-                        // Kembalikan video idle
                         if (bgVideo) {
                             const idleFile = getVideoFile('backdroputama');
                             bgVideo.src = idleFile;
