@@ -427,6 +427,69 @@
     const bgVideo = document.getElementById('bgVideo');
 
     // ================================================
+    // DRAG BACKGROUND VIDEO (AMAN UNTUK HP)
+    // ================================================
+    if (bgVideo) {
+        let isDragging = false;
+        let startX = 0, startY = 0;
+        let currentX = 0, currentY = 0;
+        let translateX = 0, translateY = 0;
+
+        bgVideo.addEventListener('loadedmetadata', function() {
+            if (bgVideo.style) {
+                bgVideo.style.transform = `translate(${translateX}px, ${translateY}px)`;
+                bgVideo.style.willChange = 'transform';
+            }
+        });
+
+        bgVideo.addEventListener('touchstart', function(e) {
+            if (e.touches.length === 1 && bgVideo.readyState >= 2) {
+                isDragging = true;
+                startX = e.touches[0].clientX;
+                startY = e.touches[0].clientY;
+                currentX = translateX;
+                currentY = translateY;
+                if (bgVideo.style) {
+                    bgVideo.style.transition = 'none';
+                }
+            }
+        }, { passive: true });
+
+        bgVideo.addEventListener('touchmove', function(e) {
+            if (!isDragging) return;
+            e.preventDefault();
+            const dx = e.touches[0].clientX - startX;
+            const dy = e.touches[0].clientY - startY;
+            translateX = currentX + dx;
+            translateY = currentY + dy;
+            const maxOffset = 150;
+            translateX = Math.max(-maxOffset, Math.min(maxOffset, translateX));
+            translateY = Math.max(-maxOffset, Math.min(maxOffset, translateY));
+            if (bgVideo.style) {
+                bgVideo.style.transform = `translate(${translateX}px, ${translateY}px)`;
+            }
+        }, { passive: false });
+
+        bgVideo.addEventListener('touchend', function() {
+            if (isDragging) {
+                isDragging = false;
+                if (bgVideo.style) {
+                    bgVideo.style.transition = 'transform 0.3s ease';
+                }
+            }
+        }, { passive: true });
+
+        window.addEventListener('resize', function() {
+            translateX = 0;
+            translateY = 0;
+            if (bgVideo.style) {
+                bgVideo.style.transform = `translate(0px, 0px)`;
+                bgVideo.style.transition = 'transform 0.5s ease';
+            }
+        });
+    }
+
+    // ================================================
     // FUNGSI VIDEO (DENGAN DETEKSI HP)
     // ================================================
     function isMobileDevice() {
@@ -535,135 +598,6 @@
     }
 
     // ================================================
-    // LEVEL UP - VERSI SEDERHANA (PASTI JALAN)
-    // ================================================
-    function showLevelUp(level) {
-        // Cegah multiple call
-        if (window._levelUpActive) return;
-        window._levelUpActive = true;
-
-        try {
-            // Hentikan video sementara
-            if (bgVideo) {
-                bgVideo.pause();
-            }
-
-            const isMobile = window.innerWidth < 768;
-            
-            // Buat overlay
-            const overlay = document.createElement('div');
-            overlay.id = 'levelUpOverlay';
-            
-            // Style overlay
-            overlay.style.cssText = `
-                position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
-                z-index: 9999;
-                background: rgba(0,0,0,0.3);
-                display: flex;
-                align-items: flex-start;
-                justify-content: center;
-                padding-top: ${isMobile ? '12vh' : '20vh'};
-                opacity: 0;
-                transition: opacity 0.3s ease;
-            `;
-
-            // Ukuran responsif
-            const titleSize = isMobile ? '2rem' : '3.8rem';
-            const subtitleSize = isMobile ? '1rem' : '2rem';
-            const paddingBox = isMobile ? '16px 28px' : '35px 60px';
-            const borderRadius = isMobile ? '50px 16px 50px 16px' : '120px 40px 120px 40px';
-
-            // Box level up
-            const box = document.createElement('div');
-            box.id = 'levelUpBox';
-            box.style.cssText = `
-                background: linear-gradient(145deg, #ffe485, #f5b64b);
-                padding: ${paddingBox};
-                border-radius: ${borderRadius};
-                box-shadow: 0 20px 40px rgba(0,0,0,0.5), 0 0 0 4px #fff3c0, 0 0 0 8px rgba(180,124,78,0.6);
-                text-align: center;
-                border: 3px solid #faeac9;
-                font-family: 'Luckiest Guy', 'Comic Sans MS', cursive;
-                transform: scale(0.3) rotate(-5deg);
-                opacity: 0;
-                transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            `;
-            box.innerHTML = `
-                <h1 style="
-                    font-size: ${titleSize}; 
-                    color: #2d1f0c; 
-                    text-shadow: 0 3px 0 #b87d3a; 
-                    letter-spacing: 2px; 
-                    font-weight: 400; 
-                    margin: 0;
-                    line-height: 1.2;
-                ">🎉 LEVEL ${level} 🎉</h1>
-                <p style="
-                    font-size: ${subtitleSize}; 
-                    color: #3d2b12; 
-                    font-weight: 400; 
-                    margin-top: 4px; 
-                    font-family: 'Segoe UI', 'Comic Sans MS', cursive;
-                ">✨ Kamu Hebat! ✨</p>
-            `;
-
-            overlay.appendChild(box);
-            document.body.appendChild(overlay);
-
-            // Animasi masuk
-            setTimeout(() => {
-                overlay.style.opacity = '1';
-                box.style.transform = 'scale(1) rotate(0deg)';
-                box.style.opacity = '1';
-            }, 50);
-
-            // Confetti
-            setTimeout(() => {
-                fireConfetti(40);
-            }, 300);
-
-            // Hapus setelah 2.5 detik
-            setTimeout(() => {
-                try {
-                    box.style.transform = 'scale(0.5) rotate(5deg)';
-                    box.style.opacity = '0';
-                    overlay.style.opacity = '0';
-                    
-                    setTimeout(() => {
-                        if (overlay && overlay.parentNode) {
-                            overlay.parentNode.removeChild(overlay);
-                        }
-                        window._levelUpActive = false;
-                        // Kembalikan video idle
-                        if (bgVideo) {
-                            const idleFile = getVideoFile('backdroputama');
-                            bgVideo.src = idleFile;
-                            bgVideo.load();
-                            bgVideo.loop = true;
-                            bgVideo.muted = true;
-                            bgVideo.volume = 0.5;
-                            bgVideo.play().catch(() => {});
-                        }
-                    }, 400);
-                } catch(e) {
-                    if (overlay && overlay.parentNode) {
-                        overlay.parentNode.removeChild(overlay);
-                    }
-                    window._levelUpActive = false;
-                }
-            }, 2500);
-
-        } catch(e) {
-            console.warn('showLevelUp error:', e);
-            window._levelUpActive = false;
-        }
-    }
-
-    // ================================================
     // SPARKLE & CONFETTI
     // ================================================
     function createSparkles(x, y, count = 8) {
@@ -701,6 +635,16 @@
             confettiContainer.appendChild(piece);
             setTimeout(() => piece.remove(), 5000);
         }
+    }
+
+    function showLevelUp(level) {
+        const overlay = document.createElement('div');
+        overlay.className = 'level-up-overlay';
+        overlay.innerHTML = `<div class="level-up-box"><h1>🎉 LEVEL ${level} 🎉</h1><p>✨ Kamu Hebat! ✨</p></div>`;
+        document.body.appendChild(overlay);
+        fireConfetti(50);
+        playVideo('backdropnaiklevel', 5000);
+        setTimeout(() => overlay.remove(), 2000);
     }
 
     // ================================================
