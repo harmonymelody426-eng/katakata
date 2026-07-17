@@ -104,6 +104,11 @@
     }
 
     // ================================================
+    // DETEKSI HP
+    // ================================================
+    const isMobile = window.innerWidth < 768;
+
+    // ================================================
     // MUSIK
     // ================================================
     const bgMusic = document.getElementById('bgMusic');
@@ -429,15 +434,10 @@
     // ================================================
     // FUNGSI VIDEO (DENGAN DETEKSI HP)
     // ================================================
-    function isMobileDevice() {
-        return window.innerWidth < 768;
-    }
-
     function getVideoFile(baseName) {
-        const mobile = isMobileDevice();
         const hpVersion = `${baseName}-hp.mp4`;
         const desktopVersion = `${baseName}.mp4`;
-        return mobile ? hpVersion : desktopVersion;
+        return isMobile ? hpVersion : desktopVersion;
     }
 
     function playVideo(baseName, duration = 4000) {
@@ -452,7 +452,6 @@
         }
 
         const videoFile = getVideoFile(baseName);
-        const isMobile = isMobileDevice();
         console.log(`📱 ${isMobile ? 'HP' : 'Desktop'} → 🎬 Memutar: ${videoFile}`);
 
         bgVideo.loop = false;
@@ -512,13 +511,9 @@
         bgVideo.play().catch(() => {});
     }
 
-    // ================================================
-    // INIT BACKGROUND VIDEO (DEFINISIKAN SEBELUM DIPANGGIL)
-    // ================================================
     function initBackgroundVideo() {
         if (!bgVideo) return;
         const idleFile = getVideoFile('backdroputama');
-        const isMobile = isMobileDevice();
         console.log(`📱 ${isMobile ? 'HP' : 'Desktop'} → 🎬 Load backdrop: ${idleFile}`);
         
         bgVideo.src = idleFile;
@@ -538,44 +533,38 @@
     }
 
     // ================================================
-    // LEVEL UP (VERSI SEDERHANA)
+    // LEVEL UP - RINGAN UNTUK HP
     // ================================================
     function showLevelUp(level) {
         if (window._levelUpActive) return;
         window._levelUpActive = true;
 
         try {
-            // Hentikan video sementara
             if (bgVideo) {
                 bgVideo.pause();
             }
 
-            const isMobile = window.innerWidth < 768;
-            
-            // Buat overlay
+            const titleSize = isMobile ? '1.8rem' : '3.8rem';
+            const subtitleSize = isMobile ? '0.9rem' : '2rem';
+            const paddingBox = isMobile ? '12px 20px' : '35px 60px';
+            const borderRadius = isMobile ? '40px 12px 40px 12px' : '120px 40px 120px 40px';
+            const paddingTop = isMobile ? '8vh' : '20vh';
+
             const overlay = document.createElement('div');
             overlay.id = 'levelUpOverlay';
-            
             overlay.style.cssText = `
                 position: fixed;
-                top: 0;
-                left: 0;
-                width: 100%;
-                height: 100%;
+                top: 0; left: 0;
+                width: 100%; height: 100%;
                 z-index: 9999;
                 background: rgba(0,0,0,0.3);
                 display: flex;
                 align-items: flex-start;
                 justify-content: center;
-                padding-top: ${isMobile ? '12vh' : '20vh'};
+                padding-top: ${paddingTop};
                 opacity: 0;
                 transition: opacity 0.3s ease;
             `;
-
-            const titleSize = isMobile ? '2rem' : '3.8rem';
-            const subtitleSize = isMobile ? '1rem' : '2rem';
-            const paddingBox = isMobile ? '16px 28px' : '35px 60px';
-            const borderRadius = isMobile ? '50px 16px 50px 16px' : '120px 40px 120px 40px';
 
             const box = document.createElement('div');
             box.id = 'levelUpBox';
@@ -583,19 +572,19 @@
                 background: linear-gradient(145deg, #ffe485, #f5b64b);
                 padding: ${paddingBox};
                 border-radius: ${borderRadius};
-                box-shadow: 0 20px 40px rgba(0,0,0,0.5), 0 0 0 4px #fff3c0, 0 0 0 8px rgba(180,124,78,0.6);
+                box-shadow: 0 20px 40px rgba(0,0,0,0.5), 0 0 0 3px #fff3c0, 0 0 0 6px rgba(180,124,78,0.6);
                 text-align: center;
                 border: 3px solid #faeac9;
                 font-family: 'Luckiest Guy', 'Comic Sans MS', cursive;
-                transform: scale(0.3) rotate(-5deg);
+                transform: ${isMobile ? 'scale(0.5)' : 'scale(0.3) rotate(-5deg)'};
                 opacity: 0;
-                transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             `;
             box.innerHTML = `
                 <h1 style="
                     font-size: ${titleSize}; 
                     color: #2d1f0c; 
-                    text-shadow: 0 3px 0 #b87d3a; 
+                    text-shadow: 0 2px 0 #b87d3a; 
                     letter-spacing: 2px; 
                     font-weight: 400; 
                     margin: 0;
@@ -605,7 +594,7 @@
                     font-size: ${subtitleSize}; 
                     color: #3d2b12; 
                     font-weight: 400; 
-                    margin-top: 4px; 
+                    margin-top: 2px; 
                     font-family: 'Segoe UI', 'Comic Sans MS', cursive;
                 ">✨ Kamu Hebat! ✨</p>
             `;
@@ -613,22 +602,24 @@
             overlay.appendChild(box);
             document.body.appendChild(overlay);
 
-            // Animasi masuk
+            // Animasi masuk (lebih cepat di HP)
             setTimeout(() => {
                 overlay.style.opacity = '1';
-                box.style.transform = 'scale(1) rotate(0deg)';
+                box.style.transform = 'scale(1)';
                 box.style.opacity = '1';
-            }, 50);
+            }, 30);
 
-            // Confetti
+            // Confetti lebih sedikit di HP
+            const confettiCount = isMobile ? 20 : 40;
             setTimeout(() => {
-                fireConfetti(40);
-            }, 300);
+                fireConfetti(confettiCount);
+            }, 200);
 
-            // Hapus setelah 2.5 detik
+            // Hapus setelah 2 detik di HP, 2.5 di desktop
+            const duration = isMobile ? 2000 : 2500;
             setTimeout(() => {
                 try {
-                    box.style.transform = 'scale(0.5) rotate(5deg)';
+                    box.style.transform = 'scale(0.5)';
                     box.style.opacity = '0';
                     overlay.style.opacity = '0';
                     
@@ -637,7 +628,6 @@
                             overlay.parentNode.removeChild(overlay);
                         }
                         window._levelUpActive = false;
-                        // Kembalikan video idle
                         if (bgVideo) {
                             const idleFile = getVideoFile('backdroputama');
                             bgVideo.src = idleFile;
@@ -647,14 +637,14 @@
                             bgVideo.volume = 0.5;
                             bgVideo.play().catch(() => {});
                         }
-                    }, 400);
+                    }, 300);
                 } catch(e) {
                     if (overlay && overlay.parentNode) {
                         overlay.parentNode.removeChild(overlay);
                     }
                     window._levelUpActive = false;
                 }
-            }, 2500);
+            }, duration);
 
         } catch(e) {
             console.warn('showLevelUp error:', e);
@@ -663,11 +653,12 @@
     }
 
     // ================================================
-    // SPARKLE & CONFETTI
+    // SPARKLE & CONFETTI (DENGAN LIMIT HP)
     // ================================================
     function createSparkles(x, y, count = 8) {
         const emojis = ['✨', '⭐', '🌟', '💫'];
-        for (let i = 0; i < count; i++) {
+        const actualCount = isMobile ? Math.min(count, 5) : count;
+        for (let i = 0; i < actualCount; i++) {
             const el = document.createElement('div');
             el.className = 'sparkle';
             el.textContent = emojis[Math.floor(Math.random() * emojis.length)];
@@ -684,7 +675,8 @@
 
     function fireConfetti(count = 30) {
         const colors = ['#f44336','#e91e63','#9c27b0','#3f51b5','#2196f3','#009688','#4caf50','#ffeb3b','#ff9800','#ff5722','#ffffff','#fdd835'];
-        for (let i=0; i<count; i++) {
+        const actualCount = isMobile ? Math.min(count, 20) : count;
+        for (let i=0; i<actualCount; i++) {
             const piece = document.createElement('div');
             piece.className = 'confetti-piece';
             const size = 6 + Math.random() * 10;
@@ -750,9 +742,9 @@
         tiles.forEach((tile, i) => {
             const delay = Math.random() * 3;
             const duration = 2.8 + Math.random() * 1.8;
-            const offsetY = 6 + Math.random() * 8;
-            const rotMin = -3 + Math.random() * 2;
-            const rotMax = 3 + Math.random() * 2;
+            const offsetY = isMobile ? 4 + Math.random() * 4 : 6 + Math.random() * 8;
+            const rotMin = isMobile ? -1 + Math.random() * 1 : -3 + Math.random() * 2;
+            const rotMax = isMobile ? 1 + Math.random() * 1 : 3 + Math.random() * 2;
             floatingTiles.push({
                 el: tile,
                 delay, duration, offsetY, rotMin, rotMax,
@@ -898,7 +890,7 @@
             await updateRanking(currentPlayerName, score, currentLevel + 1);
             messageBox.innerText = `✅ Benar! +10 poin 🎉`;
             messageBox.className = 'message correct';
-            fireConfetti(25);
+            fireConfetti(isMobile ? 15 : 25);
             playVideo('backdropA', 4000);
             currentWordIndex++;
             setTimeout(() => loadWord(), 4000);
@@ -954,18 +946,16 @@
     }
 
     // ================================================
-    // RESIZE HANDLER (UPDATE SAAT ROTASI HP)
+    // RESIZE HANDLER (lebih ringan, tidak reload video terus)
     // ================================================
+    let resizeTimeout;
     window.addEventListener('resize', function() {
-        const isMobile = window.innerWidth < 768;
-        if (bgVideo) {
-            const currentSrc = bgVideo.src || '';
-            const expectedFile = isMobile ? 'backdroputama-hp.mp4' : 'backdroputama.mp4';
-            if (!currentSrc.includes(expectedFile.replace('.mp4', ''))) {
-                console.log('🔄 Orientasi berubah, ganti backdrop');
-                initBackgroundVideo();
-            }
-        }
+        clearTimeout(resizeTimeout);
+        resizeTimeout = setTimeout(() => {
+            // Tidak reload video setiap resize, karena bisa berat di HP
+            // Hanya update jika benar-benar diperlukan
+            console.log('🔄 Resize detected, but video not reloaded');
+        }, 500);
     });
 
     resetBtn.addEventListener('click', resetCurrentWord);
