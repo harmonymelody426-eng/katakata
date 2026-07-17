@@ -437,7 +437,6 @@
     function getVideoFile(baseName) {
         const hpVersion = `${baseName}-hp.mp4`;
         const desktopVersion = `${baseName}.mp4`;
-        // Di HP, coba pakai versi HP, fallback ke desktop
         return isMobile ? hpVersion : desktopVersion;
     }
 
@@ -468,7 +467,6 @@
             })
             .catch(e => {
                 console.warn(`❌ Gagal memutar ${videoFile}:`, e.message);
-                // Jika gagal dan ini adalah versi HP, coba fallback ke desktop
                 if (videoFile.includes('-hp.mp4')) {
                     const fallbackFile = `${baseName}.mp4`;
                     console.warn(`🔄 Fallback ke ${fallbackFile}`);
@@ -515,7 +513,6 @@
 
     function initBackgroundVideo() {
         if (!bgVideo) return;
-        // Coba pakai video HP dulu, fallback ke desktop
         let idleFile = getVideoFile('backdroputama');
         console.log(`📱 ${isMobile ? 'HP' : 'Desktop'} → 🎬 Load backdrop: ${idleFile}`);
         
@@ -525,14 +522,12 @@
         bgVideo.muted = true;
         bgVideo.volume = 0.5;
         
-        // Jika HP, coba play, kalau gagal fallback ke desktop
         bgVideo.play()
             .then(() => {
                 console.log('✅ Video background berhasil diputar');
             })
             .catch(e => {
                 console.warn('❌ Video play error:', e.message);
-                // Jika HP dan gagal, coba fallback ke desktop
                 if (idleFile.includes('-hp.mp4')) {
                     console.warn('🔄 Fallback ke backdroputama.mp4');
                     bgVideo.src = 'backdroputama.mp4';
@@ -548,23 +543,19 @@
     }
 
     // ================================================
-    // LEVEL UP - RINGAN UNTUK HP
+    // LEVEL UP - VIDEO DI LAYER PALING DEPAN, TEKS DI ATAS
     // ================================================
     function showLevelUp(level) {
         if (window._levelUpActive) return;
         window._levelUpActive = true;
 
         try {
+            // Pause video background sementara
             if (bgVideo) {
                 bgVideo.pause();
             }
 
-            const titleSize = isMobile ? '1.8rem' : '3.8rem';
-            const subtitleSize = isMobile ? '0.9rem' : '2rem';
-            const paddingBox = isMobile ? '12px 20px' : '35px 60px';
-            const borderRadius = isMobile ? '40px 12px 40px 12px' : '120px 40px 120px 40px';
-            const paddingTop = isMobile ? '8vh' : '20vh';
-
+            // 1. Buat overlay utama (z-index 9999 = paling depan)
             const overlay = document.createElement('div');
             overlay.id = 'levelUpOverlay';
             overlay.style.cssText = `
@@ -576,30 +567,69 @@
                 display: flex;
                 align-items: flex-start;
                 justify-content: center;
-                padding-top: ${paddingTop};
+                padding-top: ${isMobile ? '10vh' : '18vh'};
                 opacity: 0;
-                transition: opacity 0.3s ease;
+                transition: opacity 0.4s ease;
+                overflow: hidden;
             `;
 
-            const box = document.createElement('div');
-            box.id = 'levelUpBox';
-            box.style.cssText = `
-                background: linear-gradient(145deg, #ffe485, #f5b64b);
-                padding: ${paddingBox};
-                border-radius: ${borderRadius};
-                box-shadow: 0 20px 40px rgba(0,0,0,0.5), 0 0 0 3px #fff3c0, 0 0 0 6px rgba(180,124,78,0.6);
+            // 2. Video di dalam overlay (sebagai background, di belakang teks)
+            const videoWrapper = document.createElement('div');
+            videoWrapper.style.cssText = `
+                position: absolute;
+                top: 0; left: 0;
+                width: 100%; height: 100%;
+                z-index: 0;
+                overflow: hidden;
+            `;
+
+            const videoEl = document.createElement('video');
+            const videoFile = getVideoFile('backdropnaiklevel');
+            videoEl.src = videoFile;
+            videoEl.autoplay = true;
+            videoEl.muted = false;
+            videoEl.volume = 0.8;
+            videoEl.playsInline = true;
+            videoEl.style.cssText = `
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+                position: absolute;
+                top: 0;
+                left: 0;
+            `;
+            videoEl.load();
+            videoEl.play().catch(e => console.warn('⚠️ Video naik level error:', e));
+
+            videoWrapper.appendChild(videoEl);
+            overlay.appendChild(videoWrapper);
+
+            // 3. Teks level up (di atas video, z-index lebih tinggi)
+            const titleSize = isMobile ? '2rem' : '3.8rem';
+            const subtitleSize = isMobile ? '1rem' : '2rem';
+            const paddingBox = isMobile ? '16px 28px' : '35px 60px';
+            const borderRadius = isMobile ? '50px 16px 50px 16px' : '120px 40px 120px 40px';
+
+            const content = document.createElement('div');
+            content.style.cssText = `
+                position: relative;
+                z-index: 1;
                 text-align: center;
+                padding: ${paddingBox};
+                background: linear-gradient(145deg, #ffe485, #f5b64b);
+                border-radius: ${borderRadius};
+                box-shadow: 0 20px 40px rgba(0,0,0,0.5), 0 0 0 4px #fff3c0, 0 0 0 8px rgba(180,124,78,0.6);
                 border: 3px solid #faeac9;
                 font-family: 'Luckiest Guy', 'Comic Sans MS', cursive;
                 transform: ${isMobile ? 'scale(0.5)' : 'scale(0.3) rotate(-5deg)'};
                 opacity: 0;
-                transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             `;
-            box.innerHTML = `
+            content.innerHTML = `
                 <h1 style="
                     font-size: ${titleSize}; 
                     color: #2d1f0c; 
-                    text-shadow: 0 2px 0 #b87d3a; 
+                    text-shadow: 0 3px 0 #b87d3a; 
                     letter-spacing: 2px; 
                     font-weight: 400; 
                     margin: 0;
@@ -609,40 +639,47 @@
                     font-size: ${subtitleSize}; 
                     color: #3d2b12; 
                     font-weight: 400; 
-                    margin-top: 2px; 
+                    margin-top: 4px; 
                     font-family: 'Segoe UI', 'Comic Sans MS', cursive;
                 ">✨ Kamu Hebat! ✨</p>
             `;
+            overlay.appendChild(content);
 
-            overlay.appendChild(box);
+            // 4. Tambahkan ke body
             document.body.appendChild(overlay);
 
-            // Animasi masuk
+            // 5. Animasi masuk (overlay fade in + teks scale)
             setTimeout(() => {
                 overlay.style.opacity = '1';
-                box.style.transform = 'scale(1)';
-                box.style.opacity = '1';
+                content.style.transform = 'scale(1)';
+                content.style.opacity = '1';
             }, 30);
 
-            // Confetti lebih sedikit di HP
+            // 6. Confetti (lebih sedikit di HP)
             const confettiCount = isMobile ? 20 : 40;
             setTimeout(() => {
                 fireConfetti(confettiCount);
             }, 200);
 
-            // Hapus setelah 2 detik di HP, 2.5 di desktop
-            const duration = isMobile ? 2000 : 2500;
+            // 7. Hapus setelah 3 detik (agar video cukup terlihat)
+            const duration = isMobile ? 3000 : 3500;
             setTimeout(() => {
                 try {
-                    box.style.transform = 'scale(0.5)';
-                    box.style.opacity = '0';
+                    // Animasi keluar
+                    content.style.transform = 'scale(0.5)';
+                    content.style.opacity = '0';
                     overlay.style.opacity = '0';
                     
                     setTimeout(() => {
+                        // Hentikan video
+                        videoEl.pause();
+                        videoEl.src = '';
+                        // Hapus overlay
                         if (overlay && overlay.parentNode) {
                             overlay.parentNode.removeChild(overlay);
                         }
                         window._levelUpActive = false;
+                        // Kembalikan video idle
                         if (bgVideo) {
                             const idleFile = getVideoFile('backdroputama');
                             bgVideo.src = idleFile;
@@ -652,7 +689,7 @@
                             bgVideo.volume = 0.5;
                             bgVideo.play().catch(() => {});
                         }
-                    }, 300);
+                    }, 400);
                 } catch(e) {
                     if (overlay && overlay.parentNode) {
                         overlay.parentNode.removeChild(overlay);
@@ -961,7 +998,7 @@
     }
 
     // ================================================
-    // RESIZE HANDLER (RINGAN)
+    // RESIZE HANDLER
     // ================================================
     let resizeTimeout;
     window.addEventListener('resize', function() {
