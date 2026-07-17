@@ -427,160 +427,172 @@
     const bgVideo = document.getElementById('bgVideo');
 
     // ================================================
-    // DRAG BACKGROUND VIDEO (AMAN UNTUK HP)
+    // FUNGSI VIDEO (DENGAN DETEKSI HP)
     // ================================================
-    if (bgVideo) {
-        let isDragging = false;
-        let startX = 0, startY = 0;
-        let currentX = 0, currentY = 0;
-        let translateX = 0, translateY = 0;
+    function isMobileDevice() {
+        return window.innerWidth < 768;
+    }
 
-        bgVideo.addEventListener('loadedmetadata', function() {
-            if (bgVideo.style) {
-                bgVideo.style.transform = `translate(${translateX}px, ${translateY}px)`;
-                bgVideo.style.willChange = 'transform';
-            }
-        });
+    function getVideoFile(baseName) {
+        const mobile = isMobileDevice();
+        const hpVersion = `${baseName}-hp.mp4`;
+        const desktopVersion = `${baseName}.mp4`;
+        return mobile ? hpVersion : desktopVersion;
+    }
 
-        bgVideo.addEventListener('touchstart', function(e) {
-            if (e.touches.length === 1 && bgVideo.readyState >= 2) {
-                isDragging = true;
-                startX = e.touches[0].clientX;
-                startY = e.touches[0].clientY;
-                currentX = translateX;
-                currentY = translateY;
-                if (bgVideo.style) {
-                    bgVideo.style.transition = 'none';
+    function playVideo(baseName, duration = 4000) {
+        if (!bgVideo) {
+            console.warn('⚠️ Elemen video tidak ditemukan!');
+            return;
+        }
+
+        if (currentTimeout) {
+            clearTimeout(currentTimeout);
+            currentTimeout = null;
+        }
+
+        const videoFile = getVideoFile(baseName);
+        const isMobile = isMobileDevice();
+        console.log(`📱 ${isMobile ? 'HP' : 'Desktop'} → 🎬 Memutar: ${videoFile}`);
+
+        bgVideo.loop = false;
+        bgVideo.pause();
+        bgVideo.src = videoFile;
+        bgVideo.load();
+        bgVideo.muted = false;
+        bgVideo.volume = 0.8;
+
+        bgVideo.play()
+            .then(() => {
+                console.log(`✅ Video ${videoFile} berhasil diputar`);
+            })
+            .catch(e => {
+                console.warn(`❌ Gagal memutar ${videoFile}:`, e.message);
+                if (videoFile.includes('-hp.mp4')) {
+                    const fallbackFile = `${baseName}.mp4`;
+                    console.warn(`🔄 Fallback ke ${fallbackFile}`);
+                    bgVideo.src = fallbackFile;
+                    bgVideo.load();
+                    bgVideo.play().catch(err => {
+                        console.warn(`❌ Fallback gagal:`, err.message);
+                    });
                 }
-            }
-        }, { passive: true });
+            });
 
-        bgVideo.addEventListener('touchmove', function(e) {
-            if (!isDragging) return;
-            e.preventDefault();
-            const dx = e.touches[0].clientX - startX;
-            const dy = e.touches[0].clientY - startY;
-            translateX = currentX + dx;
-            translateY = currentY + dy;
-            const maxOffset = 150;
-            translateX = Math.max(-maxOffset, Math.min(maxOffset, translateX));
-            translateY = Math.max(-maxOffset, Math.min(maxOffset, translateY));
-            if (bgVideo.style) {
-                bgVideo.style.transform = `translate(${translateX}px, ${translateY}px)`;
-            }
-        }, { passive: false });
+        currentTimeout = setTimeout(() => {
+            console.log(`⏹️ Transisi selesai, kembali ke idle`);
+            bgVideo.pause();
+            const idleFile = getVideoFile('backdroputama');
+            console.log(`📱 Kembali ke idle: ${idleFile}`);
+            bgVideo.src = idleFile;
+            bgVideo.load();
+            bgVideo.loop = true;
+            bgVideo.muted = true;
+            bgVideo.volume = 0.5;
+            bgVideo.play().catch(() => {});
+            currentTimeout = null;
+        }, duration);
+    }
 
-        bgVideo.addEventListener('touchend', function() {
-            if (isDragging) {
-                isDragging = false;
-                if (bgVideo.style) {
-                    bgVideo.style.transition = 'transform 0.3s ease';
-                }
-            }
-        }, { passive: true });
+    function stopVideo() {
+        if (currentTimeout) {
+            clearTimeout(currentTimeout);
+            currentTimeout = null;
+        }
+        if (!bgVideo) return;
 
-        window.addEventListener('resize', function() {
-            translateX = 0;
-            translateY = 0;
-            if (bgVideo.style) {
-                bgVideo.style.transform = `translate(0px, 0px)`;
-                bgVideo.style.transition = 'transform 0.5s ease';
+        const idleFile = getVideoFile('backdroputama');
+        console.log(`⏹️ Stop video, kembali ke idle: ${idleFile}`);
+        bgVideo.pause();
+        bgVideo.src = idleFile;
+        bgVideo.load();
+        bgVideo.loop = true;
+        bgVideo.muted = true;
+        bgVideo.volume = 0.5;
+        bgVideo.play().catch(() => {});
+    }
+
+    function initBackgroundVideo() {
+        if (!bgVideo) return;
+        const idleFile = getVideoFile('backdroputama');
+        const isMobile = isMobileDevice();
+        console.log(`📱 ${isMobile ? 'HP' : 'Desktop'} → 🎬 Load backdrop: ${idleFile}`);
+        
+        bgVideo.src = idleFile;
+        bgVideo.load();
+        bgVideo.loop = true;
+        bgVideo.muted = true;
+        bgVideo.volume = 0.5;
+        bgVideo.play().catch(e => {
+            console.warn('❌ Video play error:', e);
+            if (idleFile.includes('-hp.mp4')) {
+                console.warn('🔄 Fallback ke backdroputama.mp4');
+                bgVideo.src = 'backdroputama.mp4';
+                bgVideo.load();
+                bgVideo.play().catch(() => {});
             }
         });
     }
 
     // ================================================
-    // LEVEL UP (VIDEO DI LAYER PALING DEPAN)
+    // LEVEL UP - VERSI SEDERHANA (PASTI JALAN)
     // ================================================
     function showLevelUp(level) {
-        // 1. Hentikan video idle sementara
-        if (bgVideo) {
-            bgVideo.pause();
-        }
+        // Cegah multiple call
+        if (window._levelUpActive) return;
+        window._levelUpActive = true;
 
-        // Deteksi HP
-        const isMobile = window.innerWidth < 768;
+        try {
+            // Hentikan video sementara
+            if (bgVideo) {
+                bgVideo.pause();
+            }
 
-        // 2. Buat overlay (background transparan)
-        const overlay = document.createElement('div');
-        overlay.className = 'level-up-overlay';
-        overlay.style.cssText = `
-            position: fixed;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            z-index: 2000;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-direction: column;
-            animation: fadeIn 0.5s ease;
-            background: rgba(0,0,0,0.2);
-        `;
+            const isMobile = window.innerWidth < 768;
+            
+            // Buat overlay
+            const overlay = document.createElement('div');
+            overlay.id = 'levelUpOverlay';
+            
+            // Style overlay
+            overlay.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                z-index: 9999;
+                background: rgba(0,0,0,0.3);
+                display: flex;
+                align-items: flex-start;
+                justify-content: center;
+                padding-top: ${isMobile ? '12vh' : '20vh'};
+                opacity: 0;
+                transition: opacity 0.3s ease;
+            `;
 
-        // 3. Buat video di layer PALING DEPAN (di atas segalanya)
-        const videoWrapper = document.createElement('div');
-        videoWrapper.style.cssText = `
-            position: absolute;
-            top: 0; left: 0;
-            width: 100%; height: 100%;
-            z-index: 10;
-            overflow: hidden;
-        `;
+            // Ukuran responsif
+            const titleSize = isMobile ? '2rem' : '3.8rem';
+            const subtitleSize = isMobile ? '1rem' : '2rem';
+            const paddingBox = isMobile ? '16px 28px' : '35px 60px';
+            const borderRadius = isMobile ? '50px 16px 50px 16px' : '120px 40px 120px 40px';
 
-        const videoEl = document.createElement('video');
-        videoEl.src = getVideoFile('backdropnaiklevel');
-        videoEl.autoplay = true;
-        videoEl.muted = false;
-        videoEl.volume = 0.8;
-        videoEl.playsInline = true;
-        videoEl.style.cssText = `
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            position: absolute;
-            top: 0;
-            left: 0;
-        `;
-        videoEl.load();
-        videoEl.play().catch(e => console.warn('⚠️ Video naik level error:', e));
-
-        videoWrapper.appendChild(videoEl);
-        overlay.appendChild(videoWrapper);
-
-        // 4. Konten teks level up (di ATAS video, z-index lebih tinggi)
-        const content = document.createElement('div');
-        content.style.cssText = `
-            position: relative;
-            z-index: 20;
-            text-align: center;
-            padding: ${isMobile ? '10px 20px' : '30px 50px'};
-            width: 100%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            pointer-events: none;
-        `;
-
-        // Ukuran font berbeda untuk HP dan Desktop
-        const titleSize = isMobile ? '2rem' : '3.5rem';
-        const subtitleSize = isMobile ? '1rem' : '1.8rem';
-        const paddingBox = isMobile ? '15px 25px' : '30px 50px';
-        const borderRadius = isMobile ? '60px 20px 60px 20px' : '120px 40px 120px 40px';
-        const shadowSize = isMobile ? '0 20px 30px rgba(0,0,0,0.5), 0 0 0 3px #fff3c0, 0 0 0 6px rgba(180,124,78,0.6)' : '0 30px 40px rgba(0,0,0,0.5), 0 0 0 6px #fff3c0, 0 0 0 12px rgba(180,124,78,0.6)';
-
-        content.innerHTML = `
-            <div class="level-up-box" style="
+            // Box level up
+            const box = document.createElement('div');
+            box.id = 'levelUpBox';
+            box.style.cssText = `
                 background: linear-gradient(145deg, #ffe485, #f5b64b);
                 padding: ${paddingBox};
                 border-radius: ${borderRadius};
-                box-shadow: ${shadowSize};
+                box-shadow: 0 20px 40px rgba(0,0,0,0.5), 0 0 0 4px #fff3c0, 0 0 0 8px rgba(180,124,78,0.6);
                 text-align: center;
                 border: 3px solid #faeac9;
                 font-family: 'Luckiest Guy', 'Comic Sans MS', cursive;
-                display: inline-block;
-                margin: 0 auto;
-                pointer-events: auto;
-            ">
+                transform: scale(0.3) rotate(-5deg);
+                opacity: 0;
+                transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            `;
+            box.innerHTML = `
                 <h1 style="
                     font-size: ${titleSize}; 
                     color: #2d1f0c; 
@@ -594,38 +606,61 @@
                     font-size: ${subtitleSize}; 
                     color: #3d2b12; 
                     font-weight: 400; 
-                    margin-top: 2px; 
+                    margin-top: 4px; 
                     font-family: 'Segoe UI', 'Comic Sans MS', cursive;
-                    letter-spacing: 1px;
                 ">✨ Kamu Hebat! ✨</p>
-            </div>
-        `;
-        overlay.appendChild(content);
+            `;
 
-        // 5. Tambahkan ke body
-        document.body.appendChild(overlay);
-        fireConfetti(50);
+            overlay.appendChild(box);
+            document.body.appendChild(overlay);
 
-        // 6. Hapus overlay setelah 5 detik
-        const overlayTimeout = setTimeout(() => {
-            videoEl.pause();
-            videoEl.src = '';
-            overlay.remove();
-            if (bgVideo) {
-                const idleFile = getVideoFile('backdroputama');
-                bgVideo.src = idleFile;
-                bgVideo.load();
-                bgVideo.loop = true;
-                bgVideo.muted = true;
-                bgVideo.volume = 0.5;
-                bgVideo.play().catch(() => {});
-            }
-        }, 5000);
+            // Animasi masuk
+            setTimeout(() => {
+                overlay.style.opacity = '1';
+                box.style.transform = 'scale(1) rotate(0deg)';
+                box.style.opacity = '1';
+            }, 50);
 
-        if (window._levelUpTimeout) {
-            clearTimeout(window._levelUpTimeout);
+            // Confetti
+            setTimeout(() => {
+                fireConfetti(40);
+            }, 300);
+
+            // Hapus setelah 2.5 detik
+            setTimeout(() => {
+                try {
+                    box.style.transform = 'scale(0.5) rotate(5deg)';
+                    box.style.opacity = '0';
+                    overlay.style.opacity = '0';
+                    
+                    setTimeout(() => {
+                        if (overlay && overlay.parentNode) {
+                            overlay.parentNode.removeChild(overlay);
+                        }
+                        window._levelUpActive = false;
+                        // Kembalikan video idle
+                        if (bgVideo) {
+                            const idleFile = getVideoFile('backdroputama');
+                            bgVideo.src = idleFile;
+                            bgVideo.load();
+                            bgVideo.loop = true;
+                            bgVideo.muted = true;
+                            bgVideo.volume = 0.5;
+                            bgVideo.play().catch(() => {});
+                        }
+                    }, 400);
+                } catch(e) {
+                    if (overlay && overlay.parentNode) {
+                        overlay.parentNode.removeChild(overlay);
+                    }
+                    window._levelUpActive = false;
+                }
+            }, 2500);
+
+        } catch(e) {
+            console.warn('showLevelUp error:', e);
+            window._levelUpActive = false;
         }
-        window._levelUpTimeout = overlayTimeout;
     }
 
     // ================================================
@@ -666,16 +701,6 @@
             confettiContainer.appendChild(piece);
             setTimeout(() => piece.remove(), 5000);
         }
-    }
-
-    function showLevelUp(level) {
-        const overlay = document.createElement('div');
-        overlay.className = 'level-up-overlay';
-        overlay.innerHTML = `<div class="level-up-box"><h1>🎉 LEVEL ${level} 🎉</h1><p>✨ Kamu Hebat! ✨</p></div>`;
-        document.body.appendChild(overlay);
-        fireConfetti(50);
-        playVideo('backdropnaiklevel', 5000);
-        setTimeout(() => overlay.remove(), 2000);
     }
 
     // ================================================
