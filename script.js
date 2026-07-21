@@ -1,18 +1,1043 @@
-/* Untuk gambar background HP */
-#bgImage {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    z-index: 0;
-    pointer-events: none;
-    /* Efek lembut agar tidak statis */
-    animation: bgBreath 10s ease-in-out infinite alternate;
-}
+(function() {
+    // ================================================
+    // API KEY PIXABAY
+    // ================================================
+    const PIXABAY_API_KEY = '56708277-1122a65ab11fe5066b2a03f65';
 
-@keyframes bgBreath {
-    0% { transform: scale(1); opacity: 0.9; }
-    100% { transform: scale(1.03); opacity: 1; }
-}
+    // ================================================
+    // SUPABASE CONFIG
+    // ================================================
+    const SUPABASE_URL = 'https://deicxytgwshptijgkouv.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRlaWN4eXRnd3NocHRpamdrb3V2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQyMTI5NTEsImV4cCI6MjA5OTc4ODk1MX0.oibKnMAnhnA7EJwu7OTVMASRfSC3n85EJp7LugJzRaU';
+
+    // ================================================
+    // DATA LEVEL & KATA
+    // ================================================
+    const LEVELS = [
+        { words: ['babi', 'bola', 'kuda', 'loli', 'mama'], emoji: ['🐷', '⚽', '🐴', '🍭', '👩'] },
+        { words: ['kotak', 'pensil', 'sandal', 'topi', 'buku'], emoji: ['📦', '✏️', '👡', '🧢', '📘'] },
+        { words: ['kereta', 'pisang', 'sekolah', 'mobil', 'kamera'], emoji: ['🚂', '🍌', '🏫', '🚗', '📷'] },
+        { words: ['telepon', 'sepeda', 'komputer', 'penggaris', 'bendera'], emoji: ['📞', '🚲', '💻', '📏', '🚩'] }
+    ];
+
+    const WORD_QUERY_MAP = {
+        'babi': 'pig animal farm',
+        'bola': 'ball sport football',
+        'kuda': 'horse animal farm',
+        'loli': 'lollipop candy sweet',
+        'mama': 'mother woman parent',
+        'kotak': 'box cardboard cube',
+        'pensil': 'pencil writing tool',
+        'sandal': 'sandals footwear shoes',
+        'topi': 'hat cap headwear',
+        'buku': 'book reading library',
+        'kereta': 'train locomotive railway',
+        'pisang': 'banana fruit yellow',
+        'sekolah': 'school building education',
+        'mobil': 'car vehicle automobile',
+        'kamera': 'camera photography device',
+        'telepon': 'telephone phone device',
+        'sepeda': 'bicycle bike cycling',
+        'komputer': 'computer laptop device',
+        'penggaris': 'ruler measurement school',
+        'bendera': 'flag national symbol'
+    };
+
+    const imageCache = {};
+
+    function fetchPixabayImage(word, emoji) {
+        return new Promise((resolve, reject) => {
+            if (imageCache[word]) {
+                resolve(imageCache[word]);
+                return;
+            }
+            const query = WORD_QUERY_MAP[word] || word;
+            const url = `https://pixabay.com/api/?key=${PIXABAY_API_KEY}&q=${encodeURIComponent(query)}&image_type=photo&lang=en&per_page=10&safesearch=true&orientation=horizontal&min_width=400&min_height=300`;
+            console.log(`🔍 Mencari: "${query}" untuk kata "${word}"`);
+            fetch(url)
+                .then(response => {
+                    if (!response.ok) throw new Error('Network response was not ok');
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.hits && data.hits.length > 0) {
+                        const imageUrl = data.hits[0].webformatURL;
+                        imageCache[word] = imageUrl;
+                        console.log(`✅ Gambar ditemukan untuk "${word}"`);
+                        resolve(imageUrl);
+                    } else {
+                        console.log(`⚠️ Tidak ada hasil untuk "${query}", coba kata dasar "${word}"`);
+                        const fallbackUrl = `https://pixabay.com/api/?key=${PIXABAY_API_KEY}&q=${encodeURIComponent(word)}&image_type=photo&lang=en&per_page=10&safesearch=true&orientation=horizontal`;
+                        return fetch(fallbackUrl)
+                            .then(res => res.json())
+                            .then(fallbackData => {
+                                if (fallbackData.hits && fallbackData.hits.length > 0) {
+                                    const imgUrl = fallbackData.hits[0].webformatURL;
+                                    imageCache[word] = imgUrl;
+                                    console.log(`✅ Gambar fallback ditemukan untuk "${word}"`);
+                                    resolve(imgUrl);
+                                } else {
+                                    console.log(`⚠️ Tidak ada hasil, coba bahasa Indonesia`);
+                                    const lastResortUrl = `https://pixabay.com/api/?key=${PIXABAY_API_KEY}&q=${encodeURIComponent(word)}&image_type=photo&lang=id&per_page=5&safesearch=true`;
+                                    return fetch(lastResortUrl)
+                                        .then(res => res.json())
+                                        .then(lastData => {
+                                            if (lastData.hits && lastData.hits.length > 0) {
+                                                const imgUrl = lastData.hits[0].webformatURL;
+                                                imageCache[word] = imgUrl;
+                                                console.log(`✅ Gambar last-resort ditemukan untuk "${word}"`);
+                                                resolve(imgUrl);
+                                            } else {
+                                                console.log(`❌ Gagal total untuk "${word}"`);
+                                                reject(new Error('No image found'));
+                                            }
+                                        });
+                                }
+                            });
+                    }
+                })
+                .catch(error => {
+                    console.warn('Gagal ambil gambar dari Pixabay:', error);
+                    reject(error);
+                });
+        });
+    }
+
+    // ================================================
+    // DETEKSI HP
+    // ================================================
+    const isMobile = window.innerWidth < 768;
+
+    // ================================================
+    // MUSIK
+    // ================================================
+    const bgMusic = document.getElementById('bgMusic');
+    const musicControl = document.getElementById('musicControl');
+    let musicPlaying = false;
+
+    if (bgMusic) {
+        bgMusic.volume = 0.3;
+        bgMusic.loop = true;
+
+        function playMusic() {
+            return bgMusic.play().then(() => {
+                musicPlaying = true;
+                if (musicControl) musicControl.textContent = '🔊';
+                console.log('✅ Musik berhasil diputar');
+            }).catch(err => {
+                console.warn('❌ Gagal memutar musik:', err.message);
+                if (err.name === 'NotSupportedError' || err.message.includes('404') || err.message.includes('Failed to load')) {
+                    console.warn('🔄 Coba reload audio source...');
+                    bgMusic.load();
+                    return bgMusic.play().then(() => {
+                        musicPlaying = true;
+                        if (musicControl) musicControl.textContent = '🔊';
+                        console.log('✅ Musik berhasil diputar setelah reload');
+                    }).catch(e => {
+                        console.warn('❌ Gagal juga setelah reload:', e.message);
+                        throw e;
+                    });
+                }
+                throw err;
+            });
+        }
+
+        playMusic().catch(() => {
+            musicPlaying = false;
+            if (musicControl) musicControl.textContent = '🔇';
+            console.log('🔇 Autoplay diblokir, tunggu klik user');
+        });
+
+        if (musicControl) {
+            musicControl.addEventListener('click', function(e) {
+                e.stopPropagation();
+                if (bgMusic.paused) {
+                    playMusic().catch(() => {});
+                } else {
+                    bgMusic.pause();
+                    musicControl.textContent = '🔇';
+                    musicPlaying = false;
+                    console.log('⏸️ Musik di-pause');
+                }
+            });
+        }
+
+        let musicStarted = false;
+        document.addEventListener('click', function startMusicOnClick() {
+            if (!musicStarted && bgMusic.paused) {
+                musicStarted = true;
+                playMusic().catch(() => {
+                    musicStarted = false;
+                });
+                document.removeEventListener('click', startMusicOnClick);
+            }
+        });
+
+        document.addEventListener('click', function retryMusic() {
+            if (bgMusic.paused && !musicPlaying) {
+                playMusic().catch(() => {});
+            }
+        }, { once: true });
+
+    } else {
+        console.warn('⚠️ Elemen audio #bgMusic tidak ditemukan!');
+    }
+
+    // ================================================
+    // LEADERBOARD DENGAN SUPABASE
+    // ================================================
+    const RANKING_KEY = 'belajarBacaRanking';
+    let currentPlayerName = '';
+    let currentPlayerScore = 0;
+    let gameStarted = false;
+
+    const startOverlay = document.getElementById('startOverlay');
+    const playerNameInput = document.getElementById('playerNameInput');
+    const startGameBtn = document.getElementById('startGameBtn');
+    const playerNameDisplay = document.getElementById('playerNameText');
+    const gameContainer = document.getElementById('app');
+
+    const leaderboardModal = document.getElementById('leaderboardModal');
+    const showLeaderboardBtn = document.getElementById('showLeaderboardBtn');
+    const closeLeaderboardBtn = document.getElementById('closeLeaderboardBtn');
+    const inGameLeaderboardBtn = document.getElementById('inGameLeaderboardBtn');
+    const leaderboardList = document.getElementById('leaderboardList');
+    const deleteRankingBtn = document.getElementById('deleteRankingBtn');
+    const exportLeaderboardBtn = document.getElementById('exportLeaderboardBtn');
+    const exportModalBtn = document.getElementById('exportModalBtn');
+    const deleteDataBtn = document.getElementById('deleteDataBtn');
+
+    async function getRanking() {
+        try {
+            const url = `${SUPABASE_URL}/rest/v1/leaderboard?select=*&order=score.desc&limit=100`;
+            const response = await fetch(url, {
+                headers: {
+                    'apikey': SUPABASE_ANON_KEY,
+                    'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                }
+            });
+            if (!response.ok) throw new Error('Failed to fetch ranking');
+            const data = await response.json();
+            return data || [];
+        } catch (error) {
+            console.warn('⚠️ Gagal ambil data dari Supabase, pakai localStorage:', error);
+            try {
+                const local = localStorage.getItem(RANKING_KEY);
+                return local ? JSON.parse(local) : [];
+            } catch {
+                return [];
+            }
+        }
+    }
+
+    async function saveRankingToSupabase(ranking) {
+        try {
+            for (const item of ranking) {
+                const deleteUrl = `${SUPABASE_URL}/rest/v1/leaderboard?name=eq.${encodeURIComponent(item.name)}`;
+                await fetch(deleteUrl, {
+                    method: 'DELETE',
+                    headers: {
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                    }
+                });
+                const insertUrl = `${SUPABASE_URL}/rest/v1/leaderboard`;
+                const response = await fetch(insertUrl, {
+                    method: 'POST',
+                    headers: {
+                        'apikey': SUPABASE_ANON_KEY,
+                        'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
+                        'Content-Type': 'application/json',
+                        'Prefer': 'return=minimal'
+                    },
+                    body: JSON.stringify({
+                        name: item.name,
+                        score: item.score,
+                        level: item.level,
+                        created_at: item.created_at || new Date().toISOString()
+                    })
+                });
+                if (!response.ok) {
+                    console.warn(`⚠️ Gagal insert data untuk ${item.name}:`, response.status);
+                }
+            }
+            console.log('✅ Data leaderboard berhasil disimpan ke Supabase');
+        } catch (error) {
+            console.warn('⚠️ Gagal simpan ke Supabase, simpan ke localStorage:', error);
+            localStorage.setItem(RANKING_KEY, JSON.stringify(ranking));
+        }
+    }
+
+    async function updateRanking(name, score, level) {
+        let ranking = await getRanking();
+        const existing = ranking.find(item => item.name.toLowerCase() === name.toLowerCase());
+        if (existing) {
+            if (score > existing.score) {
+                existing.score = score;
+                existing.level = level;
+                existing.created_at = new Date().toISOString();
+                console.log(`🔄 Update skor ${name}: ${score}`);
+            } else {
+                console.log(`⏩ Skor ${name} tidak berubah (${score} <= ${existing.score})`);
+            }
+        } else {
+            ranking.push({ name, score, level, created_at: new Date().toISOString() });
+            console.log(`➕ Tambah pemain baru: ${name} (${score})`);
+        }
+        ranking.sort((a, b) => b.score - a.score);
+        await saveRankingToSupabase(ranking);
+        localStorage.setItem(RANKING_KEY, JSON.stringify(ranking));
+        return ranking;
+    }
+
+    async function renderLeaderboard() {
+        const ranking = await getRanking();
+        if (ranking.length === 0) {
+            leaderboardList.innerHTML = `<p style="color:rgba(255,255,255,0.6); text-align:center;">Belum ada data. Mulai bermain dulu!</p>`;
+            return;
+        }
+        let html = '';
+        ranking.forEach((item, index) => {
+            const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `#${index+1}`;
+            html += `
+                <div class="leaderboard-item">
+                    <span class="rank">${medal}</span>
+                    <span class="name">${item.name}</span>
+                    <span class="score">${item.score}</span>
+                    <span class="level">Level ${item.level}</span>
+                </div>
+            `;
+        });
+        leaderboardList.innerHTML = html;
+    }
+
+    async function exportLeaderboardToXLS() {
+        const password = prompt('Masukkan password untuk ekspor data:');
+        if (password !== 'katakatasule') {
+            if (password !== null) alert('❌ Password salah! Ekspor dibatalkan.');
+            return;
+        }
+        const ranking = await getRanking();
+        if (ranking.length === 0) {
+            alert('Belum ada data untuk diekspor.');
+            return;
+        }
+        let content = "Peringkat\tNama\tSkor\tLevel\n";
+        ranking.forEach((item, index) => {
+            content += `${index+1}\t${item.name}\t${item.score}\t${item.level}\n`;
+        });
+        const blob = new Blob(["\uFEFF" + content], { type: 'application/vnd.ms-excel;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `leaderboard_${new Date().toISOString().slice(0,10)}.xls`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        alert('✅ Data berhasil diekspor!');
+    }
+
+    async function openLeaderboard() {
+        await renderLeaderboard();
+        leaderboardModal.classList.add('active');
+    }
+
+    function closeLeaderboard() {
+        leaderboardModal.classList.remove('active');
+    }
+
+    showLeaderboardBtn.addEventListener('click', openLeaderboard);
+    closeLeaderboardBtn.addEventListener('click', closeLeaderboard);
+    inGameLeaderboardBtn.addEventListener('click', openLeaderboard);
+    leaderboardModal.addEventListener('click', function(e) {
+        if (e.target === this) closeLeaderboard();
+    });
+
+    async function deleteAllData() {
+        const password = prompt('Masukkan password untuk menghapus semua data peringkat:');
+        if (password !== 'katakatasule') {
+            if (password !== null) alert('❌ Password salah! Data tidak dihapus.');
+            return;
+        }
+        if (!confirm('Yakin ingin menghapus semua data peringkat?')) return;
+        try {
+            const deleteUrl = `${SUPABASE_URL}/rest/v1/leaderboard?name=neq.null`;
+            await fetch(deleteUrl, {
+                method: 'DELETE',
+                headers: {
+                    'apikey': SUPABASE_ANON_KEY,
+                    'Authorization': `Bearer ${SUPABASE_ANON_KEY}`
+                }
+            });
+            console.log('✅ Data di Supabase dihapus');
+        } catch (e) {
+            console.warn('⚠️ Gagal hapus dari Supabase:', e);
+        }
+        localStorage.removeItem(RANKING_KEY);
+        await renderLeaderboard();
+        alert('✅ Semua data peringkat telah dihapus!');
+    }
+
+    deleteDataBtn.addEventListener('click', deleteAllData);
+    deleteRankingBtn.addEventListener('click', deleteAllData);
+    exportLeaderboardBtn.addEventListener('click', exportLeaderboardToXLS);
+    exportModalBtn.addEventListener('click', exportLeaderboardToXLS);
+
+    // ================================================
+    // START GAME
+    // ================================================
+    function startGame() {
+        const name = playerNameInput.value.trim();
+        if (!name) {
+            alert('Masukkan namamu dulu ya!');
+            playerNameInput.focus();
+            return;
+        }
+        currentPlayerName = name;
+        playerNameDisplay.textContent = name;
+        startOverlay.style.display = 'none';
+        gameContainer.style.display = 'flex';
+        gameStarted = true;
+        initGameAfterStart();
+    }
+
+    startGameBtn.addEventListener('click', startGame);
+    playerNameInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') startGame();
+    });
+
+    // ================================================
+    // VARIABEL GAME
+    // ================================================
+    let currentLevel = 0, currentWordIndex = 0, score = 0;
+    let currentWord = '', currentEmoji = '🐷';
+    let shuffledLetters = [];
+    let selectedIndices = [];
+    let answerSlots = [];
+    const maxLevel = LEVELS.length;
+    let isProcessing = false;
+    let animationFrameId = null;
+    let floatingTiles = [];
+    let currentTimeout = null;
+
+    const objectImage = document.getElementById('objectImage');
+    const levelDisplay = document.getElementById('levelDisplay');
+    const scoreDisplay = document.getElementById('scoreDisplay');
+    const letterGrid = document.getElementById('letterGrid');
+    const answerZone = document.getElementById('answerZone');
+    const messageBox = document.getElementById('messageBox');
+    const resetBtn = document.getElementById('resetBtn');
+    const confettiContainer = document.getElementById('confetti-container');
+    const bgVideo = document.getElementById('bgVideo');
+
+    // ================================================
+    // FUNGSI VIDEO / GAMBAR – OPTIMASI HP
+    // ================================================
+
+    // Pilih file video berdasarkan perangkat
+    function getVideoFile(baseName) {
+        // Untuk HP, kita punya versi -hp.webm, untuk desktop .webm
+        if (isMobile) {
+            // Coba pakai versi HP jika ada (backdropA-hp.webm)
+            // Dari daftar aset, ada backdropA-hp.webm, backdropB-hp.webm
+            // Kecuali backdropnaiklevel-hp.webm tidak ada, pakai yang biasa.
+            const hpFile = `${baseName}-hp.webm`;
+            // Jika baseName = 'backdropnaiklevel', tidak ada versi hp, jadi pakai yang biasa.
+            if (baseName === 'backdropnaiklevel') {
+                return `${baseName}.webm`;
+            }
+            return hpFile;
+        }
+        return `${baseName}.webm`;
+    }
+
+    // ----- BACKGROUND IDLE (khusus HP pakai gambar) -----
+    function initBackground() {
+        if (isMobile) {
+            // HP: gunakan gambar statis (ringan)
+            console.log('📱 HP mode: gunakan gambar backdrop.png');
+            // Sembunyikan video
+            if (bgVideo) {
+                bgVideo.style.display = 'none';
+                bgVideo.pause();
+            }
+            // Tampilkan gambar
+            let img = document.getElementById('bgImage');
+            if (!img) {
+                img = document.createElement('img');
+                img.id = 'bgImage';
+                img.style.cssText = `
+                    position: fixed;
+                    top: 0; left: 0;
+                    width: 100%; height: 100%;
+                    object-fit: cover;
+                    z-index: 0;
+                    pointer-events: none;
+                    transition: opacity 0.5s ease;
+                `;
+                document.body.prepend(img);
+            }
+            img.src = 'asset/backdrop.png';
+            img.alt = 'Background';
+            img.style.opacity = '1';
+        } else {
+            // Desktop: pakai video idle
+            console.log('💻 Desktop mode: gunakan video backdroputama.webm');
+            if (bgVideo) {
+                bgVideo.style.display = 'block';
+                const idleFile = getVideoFile('backdroputama');
+                bgVideo.src = idleFile;
+                bgVideo.load();
+                bgVideo.loop = true;
+                bgVideo.muted = true;
+                bgVideo.volume = 0.5;
+                bgVideo.play().catch(() => {});
+            }
+        }
+    }
+
+    // ----- FUNGSI PLAY VIDEO TRANISI (tetap pakai video untuk semua) -----
+    function playVideo(baseName, duration = 4000) {
+        if (!bgVideo) return;
+
+        if (currentTimeout) {
+            clearTimeout(currentTimeout);
+            currentTimeout = null;
+        }
+
+        const videoFile = getVideoFile(baseName);
+        console.log(`🎬 Memutar: ${videoFile}`);
+
+        // Untuk HP, saat transisi, kita tampilkan video di atas gambar
+        if (isMobile) {
+            bgVideo.style.display = 'block';
+            // Pastikan z-index video di atas gambar
+            bgVideo.style.zIndex = '1';
+        }
+
+        bgVideo.loop = false;
+        bgVideo.pause();
+        bgVideo.src = videoFile;
+        bgVideo.load();
+        bgVideo.muted = false;
+        bgVideo.volume = 0.8;
+
+        bgVideo.play().catch(e => {
+            console.warn(`❌ Gagal play ${videoFile}:`, e.message);
+            // Fallback ke versi tanpa -hp jika gagal
+            if (videoFile.includes('-hp.webm')) {
+                const fallback = videoFile.replace('-hp.webm', '.webm');
+                console.warn(`🔄 Fallback ke ${fallback}`);
+                bgVideo.src = fallback;
+                bgVideo.load();
+                bgVideo.play().catch(err => console.warn('Fallback gagal:', err));
+            }
+        });
+
+        currentTimeout = setTimeout(() => {
+            bgVideo.pause();
+            // Kembali ke mode idle (gambar untuk HP, video untuk desktop)
+            if (isMobile) {
+                bgVideo.style.display = 'none';
+                // Tampilkan gambar lagi
+                const img = document.getElementById('bgImage');
+                if (img) img.style.opacity = '1';
+            } else {
+                const idleFile = getVideoFile('backdroputama');
+                bgVideo.src = idleFile;
+                bgVideo.load();
+                bgVideo.loop = true;
+                bgVideo.muted = true;
+                bgVideo.play().catch(() => {});
+            }
+            currentTimeout = null;
+        }, duration);
+    }
+
+    function stopVideo() {
+        if (currentTimeout) {
+            clearTimeout(currentTimeout);
+            currentTimeout = null;
+        }
+        if (!bgVideo) return;
+        bgVideo.pause();
+        if (isMobile) {
+            bgVideo.style.display = 'none';
+            const img = document.getElementById('bgImage');
+            if (img) img.style.opacity = '1';
+        } else {
+            const idleFile = getVideoFile('backdroputama');
+            bgVideo.src = idleFile;
+            bgVideo.load();
+            bgVideo.loop = true;
+            bgVideo.muted = true;
+            bgVideo.play().catch(() => {});
+        }
+    }
+
+    // ================================================
+    // LEVEL UP - video di overlay (tetap pakai video)
+    // ================================================
+    function showLevelUp(level) {
+        if (window._levelUpActive) return;
+        window._levelUpActive = true;
+
+        try {
+            // Pause background jika video sedang diputar
+            if (bgVideo && !bgVideo.paused) {
+                bgVideo.pause();
+            }
+
+            const overlay = document.createElement('div');
+            overlay.id = 'levelUpOverlay';
+            overlay.style.cssText = `
+                position: fixed;
+                top: 0; left: 0;
+                width: 100%; height: 100%;
+                z-index: 9999;
+                background: rgba(0,0,0,0.3);
+                display: flex;
+                align-items: flex-start;
+                justify-content: center;
+                padding-top: ${isMobile ? '10vh' : '18vh'};
+                opacity: 0;
+                transition: opacity 0.3s ease;
+                overflow: hidden;
+            `;
+
+            // Video di overlay (di belakang teks)
+            const videoWrapper = document.createElement('div');
+            videoWrapper.style.cssText = `
+                position: absolute;
+                top: 0; left: 0;
+                width: 100%; height: 100%;
+                z-index: 0;
+                overflow: hidden;
+            `;
+
+            const videoEl = document.createElement('video');
+            const videoFile = getVideoFile('backdropnaiklevel');
+            videoEl.src = videoFile;
+            videoEl.autoplay = true;
+            videoEl.muted = false;
+            videoEl.volume = 0.8;
+            videoEl.playsInline = true;
+            videoEl.style.cssText = `
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+                position: absolute;
+                top: 0;
+                left: 0;
+            `;
+            videoEl.load();
+            videoEl.play().catch(e => {
+                console.warn('⚠️ Video naik level error:', e);
+                // Fallback ke .webm biasa
+                if (videoFile.includes('-hp.webm')) {
+                    const fallback = videoFile.replace('-hp.webm', '.webm');
+                    videoEl.src = fallback;
+                    videoEl.load();
+                    videoEl.play().catch(err => console.warn('Fallback gagal:', err));
+                }
+            });
+
+            videoWrapper.appendChild(videoEl);
+            overlay.appendChild(videoWrapper);
+
+            // Teks level up
+            const titleSize = isMobile ? '2rem' : '3.8rem';
+            const subtitleSize = isMobile ? '1rem' : '2rem';
+            const paddingBox = isMobile ? '16px 28px' : '35px 60px';
+            const borderRadius = isMobile ? '50px 16px 50px 16px' : '120px 40px 120px 40px';
+
+            const content = document.createElement('div');
+            content.style.cssText = `
+                position: relative;
+                z-index: 1;
+                text-align: center;
+                padding: ${paddingBox};
+                background: linear-gradient(145deg, #ffe485, #f5b64b);
+                border-radius: ${borderRadius};
+                box-shadow: 0 20px 40px rgba(0,0,0,0.5), 0 0 0 4px #fff3c0, 0 0 0 8px rgba(180,124,78,0.6);
+                border: 3px solid #faeac9;
+                font-family: 'Luckiest Guy', 'Comic Sans MS', cursive;
+                transform: scale(0.5);
+                opacity: 0;
+                transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            `;
+            content.innerHTML = `
+                <h1 style="
+                    font-size: ${titleSize}; 
+                    color: #2d1f0c; 
+                    text-shadow: 0 3px 0 #b87d3a; 
+                    letter-spacing: 2px; 
+                    font-weight: 400; 
+                    margin: 0;
+                    line-height: 1.2;
+                ">🎉 LEVEL ${level} 🎉</h1>
+                <p style="
+                    font-size: ${subtitleSize}; 
+                    color: #3d2b12; 
+                    font-weight: 400; 
+                    margin-top: 4px; 
+                    font-family: 'Segoe UI', 'Comic Sans MS', cursive;
+                ">✨ Kamu Hebat! ✨</p>
+            `;
+            overlay.appendChild(content);
+
+            document.body.appendChild(overlay);
+
+            // Animasi masuk
+            requestAnimationFrame(() => {
+                overlay.style.opacity = '1';
+                content.style.transform = 'scale(1)';
+                content.style.opacity = '1';
+            });
+
+            // Confetti
+            setTimeout(() => {
+                fireConfetti(isMobile ? 20 : 35);
+            }, 300);
+
+            const duration = isMobile ? 2500 : 3000;
+            setTimeout(() => {
+                content.style.transform = 'scale(0.5)';
+                content.style.opacity = '0';
+                overlay.style.opacity = '0';
+                setTimeout(() => {
+                    videoEl.pause();
+                    videoEl.src = '';
+                    if (overlay && overlay.parentNode) overlay.parentNode.removeChild(overlay);
+                    window._levelUpActive = false;
+                    // Kembalikan ke background idle (gambar/video)
+                    if (isMobile) {
+                        if (bgVideo) bgVideo.style.display = 'none';
+                        const img = document.getElementById('bgImage');
+                        if (img) img.style.opacity = '1';
+                    } else {
+                        if (bgVideo) {
+                            const idleFile = getVideoFile('backdroputama');
+                            bgVideo.src = idleFile;
+                            bgVideo.load();
+                            bgVideo.loop = true;
+                            bgVideo.muted = true;
+                            bgVideo.play().catch(() => {});
+                        }
+                    }
+                }, 300);
+            }, duration);
+
+        } catch(e) {
+            console.warn('showLevelUp error:', e);
+            window._levelUpActive = false;
+        }
+    }
+
+    // ================================================
+    // SPARKLE & CONFETTI (RINGAN)
+    // ================================================
+    function createSparkles(x, y, count = 8) {
+        const emojis = ['✨', '⭐', '🌟', '💫'];
+        const actualCount = isMobile ? Math.min(count, 4) : count;
+        for (let i = 0; i < actualCount; i++) {
+            const el = document.createElement('div');
+            el.className = 'sparkle';
+            el.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+            el.style.left = (x + (Math.random() - 0.5) * 20) + 'px';
+            el.style.top = (y + (Math.random() - 0.5) * 20) + 'px';
+            el.style.setProperty('--tx', (Math.random() - 0.5) * 100 + 'px');
+            el.style.setProperty('--ty', (Math.random() - 0.5) * 100 - 50 + 'px');
+            el.style.fontSize = (0.7 + Math.random() * 0.7) + 'rem';
+            el.style.animationDuration = (0.5 + Math.random() * 0.4) + 's';
+            document.body.appendChild(el);
+            setTimeout(() => el.remove(), 900);
+        }
+    }
+
+    function fireConfetti(count = 30) {
+        const colors = ['#f44336','#e91e63','#9c27b0','#3f51b5','#2196f3','#009688','#4caf50','#ffeb3b','#ff9800','#ff5722','#ffffff','#fdd835'];
+        const actualCount = isMobile ? Math.min(count, 18) : count;
+        for (let i=0; i<actualCount; i++) {
+            const piece = document.createElement('div');
+            piece.className = 'confetti-piece';
+            const size = 5 + Math.random() * 8;
+            piece.style.width = size + 'px';
+            piece.style.height = size * (0.4 + Math.random() * 0.6) + 'px';
+            piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+            piece.style.left = Math.random() * 100 + '%';
+            piece.style.top = '-10%';
+            piece.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+            piece.style.animationDuration = (1.8 + Math.random() * 2.5) + 's';
+            piece.style.animationDelay = (Math.random() * 1) + 's';
+            piece.style.transform = `rotate(${Math.random() * 360}deg)`;
+            confettiContainer.appendChild(piece);
+            setTimeout(() => piece.remove(), 5000);
+        }
+    }
+
+    // ================================================
+    // UPDATE GAMBAR
+    // ================================================
+    function updateObjectImage(word, emoji) {
+        objectImage.innerHTML = `<span class="loading-placeholder">🔍 Mencari gambar...</span>`;
+        fetchPixabayImage(word, emoji)
+            .then(imageUrl => {
+                objectImage.innerHTML = '';
+                const img = document.createElement('img');
+                img.src = imageUrl;
+                img.alt = word;
+                img.loading = 'lazy';
+                img.onerror = function() {
+                    this.style.display = 'none';
+                    const span = document.createElement('span');
+                    span.className = 'emoji-placeholder';
+                    span.textContent = emoji;
+                    objectImage.appendChild(span);
+                };
+                objectImage.appendChild(img);
+            })
+            .catch(() => {
+                objectImage.innerHTML = '';
+                const span = document.createElement('span');
+                span.className = 'emoji-placeholder';
+                span.textContent = emoji;
+                objectImage.appendChild(span);
+            });
+    }
+
+    // ================================================
+    // FUNGSI GAME (tidak berubah)
+    // ================================================
+    function shuffleArray(arr) {
+        for (let i=arr.length-1; i>0; i--) {
+            const j = Math.floor(Math.random() * (i+1));
+            [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+        return arr;
+    }
+
+    function startFloating() {
+        if (animationFrameId) cancelAnimationFrame(animationFrameId);
+        const tiles = document.querySelectorAll('.letter-tile');
+        floatingTiles = [];
+        tiles.forEach((tile, i) => {
+            const delay = Math.random() * 2.5;
+            const duration = 2.5 + Math.random() * 1.5;
+            const offsetY = isMobile ? 3 + Math.random() * 3 : 6 + Math.random() * 6;
+            const rotMin = isMobile ? -1 : -2;
+            const rotMax = isMobile ? 1 : 2;
+            floatingTiles.push({
+                el: tile,
+                delay, duration, offsetY, rotMin, rotMax,
+                startTime: performance.now() + delay * 1000
+            });
+        });
+        animateFloating();
+    }
+
+    function animateFloating() {
+        const now = performance.now();
+        floatingTiles.forEach(data => {
+            const elapsed = (now - data.startTime) / 1000;
+            if (elapsed < 0) return;
+            const progress = (elapsed % data.duration) / data.duration;
+            const angle = progress * Math.PI * 2;
+            const yOffset = Math.sin(angle) * data.offsetY;
+            const rot = data.rotMin + (Math.sin(angle + 0.5) * 0.5 + 0.5) * (data.rotMax - data.rotMin);
+            data.el.style.transform = `rotateY(${2 + rot*0.2}deg) rotateX(${2 + rot*0.1}deg) translateY(${yOffset}px) translateZ(10px)`;
+        });
+        animationFrameId = requestAnimationFrame(animateFloating);
+    }
+
+    // ================================================
+    // LOAD WORD
+    // ================================================
+    async function loadWord() {
+        stopVideo();
+        const levelData = LEVELS[currentLevel];
+        if (currentWordIndex >= levelData.words.length) {
+            if (currentLevel < maxLevel - 1) {
+                currentLevel++;
+                currentWordIndex = 0;
+                showLevelUp(currentLevel + 1);
+                messageBox.innerText = `🎉 Naik level! Level ${currentLevel+1}`;
+                messageBox.className = 'message correct';
+                setTimeout(() => messageBox.className = 'message', 1500);
+            } else {
+                messageBox.innerText = '🏆 Hore! Kamu sudah belajar banyak! 🎉';
+                messageBox.className = 'message correct';
+                fireConfetti(60);
+                await updateRanking(currentPlayerName, score, currentLevel + 1);
+                currentLevel = 0;
+                currentWordIndex = 0;
+                score = 0;
+                updateScoreAndLevel();
+                setTimeout(() => messageBox.className = 'message', 2000);
+            }
+            await updateRanking(currentPlayerName, score, currentLevel + 1);
+        }
+        const newData = LEVELS[currentLevel];
+        currentWord = newData.words[currentWordIndex];
+        currentEmoji = newData.emoji[currentWordIndex];
+        updateObjectImage(currentWord, currentEmoji);
+        resetGameState();
+        render();
+        updateScoreAndLevel();
+        messageBox.innerText = `🔤 Susun: ${currentWord.length} huruf`;
+        messageBox.className = 'message';
+        isProcessing = false;
+        setTimeout(startFloating, 50);
+    }
+
+    function resetGameState() {
+        selectedIndices = [];
+        answerSlots = [];
+        shuffledLetters = shuffleArray(currentWord.split(''));
+        render();
+    }
+
+    function render() {
+        const remainingIndices = [];
+        for (let i=0; i<shuffledLetters.length; i++) {
+            if (!selectedIndices.includes(i)) remainingIndices.push(i);
+        }
+        letterGrid.innerHTML = '';
+        remainingIndices.forEach(originalIndex => {
+            const letter = shuffledLetters[originalIndex];
+            const tile = document.createElement('div');
+            tile.className = 'letter-tile';
+            tile.textContent = letter.toUpperCase();
+            tile.dataset.index = originalIndex;
+            const shine = document.createElement('div');
+            shine.className = 'shine';
+            tile.appendChild(shine);
+            tile.addEventListener('click', (e) => handleLetterClick(originalIndex, e));
+            tile.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                const touch = e.touches[0];
+                handleLetterClick(originalIndex, { clientX: touch.clientX, clientY: touch.clientY });
+            }, { passive: false });
+            letterGrid.appendChild(tile);
+        });
+
+        answerZone.innerHTML = '';
+        for (let i=0; i<currentWord.length; i++) {
+            const slot = document.createElement('div');
+            slot.className = 'answer-slot' + (i < answerSlots.length ? ' filled' : '');
+            slot.textContent = i < answerSlots.length ? answerSlots[i].toUpperCase() : '⬜';
+            answerZone.appendChild(slot);
+        }
+
+        if (animationFrameId) cancelAnimationFrame(animationFrameId);
+        setTimeout(startFloating, 50);
+    }
+
+    function handleLetterClick(index, event) {
+        if (isProcessing) return;
+        if (selectedIndices.includes(index) || answerSlots.length >= currentWord.length) return;
+
+        if (event && event.clientX) {
+            createSparkles(event.clientX, event.clientY, 6);
+        } else {
+            const rect = letterGrid.querySelector(`.letter-tile[data-index="${index}"]`)?.getBoundingClientRect();
+            if (rect) {
+                createSparkles(rect.left + rect.width/2, rect.top + rect.height/2, 6);
+            }
+        }
+
+        const letter = shuffledLetters[index];
+        answerSlots.push(letter);
+        selectedIndices.push(index);
+        render();
+
+        if (answerSlots.length === currentWord.length) {
+            checkAnswer();
+        } else {
+            messageBox.innerText = `📝 ${answerSlots.length}/${currentWord.length}`;
+            messageBox.className = 'message';
+        }
+    }
+
+    // ================================================
+    // CEK JAWABAN
+    // ================================================
+    async function checkAnswer() {
+        if (isProcessing) return;
+        const userAnswer = answerSlots.join('');
+        if (userAnswer === currentWord) {
+            isProcessing = true;
+            score += 10;
+            updateScoreAndLevel();
+            await updateRanking(currentPlayerName, score, currentLevel + 1);
+            messageBox.innerText = `✅ Benar! +10 poin 🎉`;
+            messageBox.className = 'message correct';
+            fireConfetti(isMobile ? 12 : 20);
+            playVideo('backdropA', 4000);
+            currentWordIndex++;
+            setTimeout(() => loadWord(), 4000);
+        } else {
+            messageBox.innerText = `❌ Coba lagi! "${userAnswer.toUpperCase()}" bukan jawaban.`;
+            messageBox.className = 'message wrong';
+            playVideo('backdropB', 4000);
+            setTimeout(() => {
+                selectedIndices = [];
+                answerSlots = [];
+                render();
+                messageBox.className = 'message';
+                messageBox.innerText = `🔄 Coba susun ulang!`;
+                stopVideo();
+            }, 4000);
+        }
+    }
+
+    function updateScoreAndLevel() {
+        levelDisplay.textContent = currentLevel + 1;
+        scoreDisplay.textContent = score;
+    }
+
+    function resetCurrentWord() {
+        if (isProcessing) return;
+        selectedIndices = [];
+        answerSlots = [];
+        render();
+        messageBox.innerText = `🔄 Huruf diacak! Coba susun.`;
+        messageBox.className = 'message';
+        stopVideo();
+    }
+
+    // ================================================
+    // INIT GAME
+    // ================================================
+    function initGameAfterStart() {
+        // Init background (gambar untuk HP, video untuk desktop)
+        initBackground();
+        
+        currentLevel = 0;
+        currentWordIndex = 0;
+        score = 0;
+        const first = LEVELS[0];
+        currentWord = first.words[0];
+        currentEmoji = first.emoji[0];
+        updateObjectImage(currentWord, currentEmoji);
+        resetGameState();
+        updateScoreAndLevel();
+        messageBox.innerText = '✨ Susun huruf jadi kata!';
+        messageBox.className = 'message';
+        isProcessing = false;
+        setTimeout(startFloating, 100);
+    }
+
+    // ================================================
+    // RESIZE HANDLER (TIDAK DIPAKAI AGAR PERFORMA)
+    // ================================================
+
+    resetBtn.addEventListener('click', resetCurrentWord);
+
+    window.addEventListener('beforeunload', () => {
+        if (animationFrameId) cancelAnimationFrame(animationFrameId);
+        if (currentTimeout) clearTimeout(currentTimeout);
+    });
+
+})();
