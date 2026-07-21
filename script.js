@@ -432,10 +432,9 @@
     const bgVideo = document.getElementById('bgVideo');
 
     // ================================================
-    // FUNGSI VIDEO - DUKUNG .webm UNTUK HP
+    // FUNGSI VIDEO - OPTIMASI PLAY LANGSUNG
     // ================================================
     function getVideoFile(baseName) {
-        // HP: pakai .webm (lebih ringan), Desktop: .mp4
         if (isMobile) {
             return `${baseName}.webm`;
         }
@@ -443,19 +442,13 @@
     }
 
     function playVideo(baseName, duration = 4000) {
-        if (!bgVideo) {
-            console.warn('⚠️ Elemen video tidak ditemukan!');
-            return;
-        }
-
+        if (!bgVideo) return;
         if (currentTimeout) {
             clearTimeout(currentTimeout);
             currentTimeout = null;
         }
 
         const videoFile = getVideoFile(baseName);
-        console.log(`📱 ${isMobile ? 'HP (.webm)' : 'Desktop (.mp4)'} → 🎬 Memutar: ${videoFile}`);
-
         bgVideo.loop = false;
         bgVideo.pause();
         bgVideo.src = videoFile;
@@ -463,27 +456,20 @@
         bgVideo.muted = false;
         bgVideo.volume = 0.8;
 
-        bgVideo.play()
-            .then(() => {
-                console.log(`✅ Video ${videoFile} berhasil diputar`);
-            })
-            .catch(e => {
-                console.warn(`❌ Gagal memutar ${videoFile}:`, e.message);
-                // Fallback: coba format lain
-                const fallbackFile = isMobile ? `${baseName}.mp4` : `${baseName}.webm`;
-                console.warn(`🔄 Fallback ke ${fallbackFile}`);
-                bgVideo.src = fallbackFile;
+        // Play langsung tanpa .then() untuk mengurangi delay
+        bgVideo.play().catch(e => {
+            console.warn(`❌ Gagal play ${videoFile}:`, e.message);
+            const fallback = isMobile ? `${baseName}.mp4` : `${baseName}.webm`;
+            if (bgVideo.src !== fallback) {
+                bgVideo.src = fallback;
                 bgVideo.load();
-                bgVideo.play().catch(err => {
-                    console.warn(`❌ Fallback gagal:`, err.message);
-                });
-            });
+                bgVideo.play().catch(err => console.warn('Fallback gagal:', err));
+            }
+        });
 
         currentTimeout = setTimeout(() => {
-            console.log(`⏹️ Transisi selesai, kembali ke idle`);
             bgVideo.pause();
             const idleFile = getVideoFile('backdroputama');
-            console.log(`📱 Kembali ke idle: ${idleFile}`);
             bgVideo.src = idleFile;
             bgVideo.load();
             bgVideo.loop = true;
@@ -500,10 +486,8 @@
             currentTimeout = null;
         }
         if (!bgVideo) return;
-
-        const idleFile = getVideoFile('backdroputama');
-        console.log(`⏹️ Stop video, kembali ke idle: ${idleFile}`);
         bgVideo.pause();
+        const idleFile = getVideoFile('backdroputama');
         bgVideo.src = idleFile;
         bgVideo.load();
         bgVideo.loop = true;
@@ -514,7 +498,7 @@
 
     function initBackgroundVideo() {
         if (!bgVideo) return;
-        let idleFile = getVideoFile('backdroputama');
+        const idleFile = getVideoFile('backdroputama');
         console.log(`📱 ${isMobile ? 'HP (.webm)' : 'Desktop (.mp4)'} → 🎬 Load backdrop: ${idleFile}`);
         
         bgVideo.src = idleFile;
@@ -523,28 +507,22 @@
         bgVideo.muted = true;
         bgVideo.volume = 0.5;
         
-        bgVideo.play()
-            .then(() => {
-                console.log('✅ Video background berhasil diputar');
-            })
-            .catch(e => {
-                console.warn('❌ Video play error:', e.message);
-                // Fallback ke format lain
-                const fallbackFile = isMobile ? 'backdroputama.mp4' : 'backdroputama.webm';
-                console.warn(`🔄 Fallback ke ${fallbackFile}`);
-                bgVideo.src = fallbackFile;
+        // Play langsung, kalau gagal fallback
+        bgVideo.play().catch(e => {
+            console.warn('❌ Play error, fallback ke format lain:', e.message);
+            const fallback = isMobile ? 'backdroputama.mp4' : 'backdroputama.webm';
+            if (bgVideo.src !== fallback) {
+                bgVideo.src = fallback;
                 bgVideo.load();
                 bgVideo.loop = true;
                 bgVideo.muted = true;
-                bgVideo.volume = 0.5;
-                bgVideo.play().catch(err => {
-                    console.warn('❌ Fallback gagal:', err.message);
-                });
-            });
+                bgVideo.play().catch(err => console.warn('Fallback gagal:', err));
+            }
+        });
     }
 
     // ================================================
-    // LEVEL UP - VIDEO DI LAYER PALING DEPAN, TEKS DI ATAS
+    // LEVEL UP - TETAP ESTETIS & RINGAN
     // ================================================
     function showLevelUp(level) {
         if (window._levelUpActive) return;
@@ -555,6 +533,7 @@
                 bgVideo.pause();
             }
 
+            // 1. BUAT OVERLAY
             const overlay = document.createElement('div');
             overlay.id = 'levelUpOverlay';
             overlay.style.cssText = `
@@ -568,10 +547,11 @@
                 justify-content: center;
                 padding-top: ${isMobile ? '10vh' : '18vh'};
                 opacity: 0;
-                transition: opacity 0.4s ease;
+                transition: opacity 0.3s ease;
                 overflow: hidden;
             `;
 
+            // 2. VIDEO DI OVERLAY (PALING DEPAN, DI BELAKANG TEKS)
             const videoWrapper = document.createElement('div');
             videoWrapper.style.cssText = `
                 position: absolute;
@@ -599,9 +579,8 @@
             videoEl.load();
             videoEl.play().catch(e => {
                 console.warn('⚠️ Video naik level error:', e);
-                // Fallback ke format lain
-                const fallbackFile = isMobile ? 'backdropnaiklevel.mp4' : 'backdropnaiklevel.webm';
-                videoEl.src = fallbackFile;
+                const fallback = isMobile ? 'backdropnaiklevel.mp4' : 'backdropnaiklevel.webm';
+                videoEl.src = fallback;
                 videoEl.load();
                 videoEl.play().catch(err => console.warn('Fallback gagal:', err));
             });
@@ -609,6 +588,7 @@
             videoWrapper.appendChild(videoEl);
             overlay.appendChild(videoWrapper);
 
+            // 3. TEKS LEVEL UP (DI ATAS VIDEO)
             const titleSize = isMobile ? '2rem' : '3.8rem';
             const subtitleSize = isMobile ? '1rem' : '2rem';
             const paddingBox = isMobile ? '16px 28px' : '35px 60px';
@@ -625,9 +605,9 @@
                 box-shadow: 0 20px 40px rgba(0,0,0,0.5), 0 0 0 4px #fff3c0, 0 0 0 8px rgba(180,124,78,0.6);
                 border: 3px solid #faeac9;
                 font-family: 'Luckiest Guy', 'Comic Sans MS', cursive;
-                transform: ${isMobile ? 'scale(0.5)' : 'scale(0.3) rotate(-5deg)'};
+                transform: scale(0.5);
                 opacity: 0;
-                transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+                transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             `;
             content.innerHTML = `
                 <h1 style="
@@ -651,47 +631,38 @@
 
             document.body.appendChild(overlay);
 
-            setTimeout(() => {
+            // 4. ANIMASI MASUK
+            requestAnimationFrame(() => {
                 overlay.style.opacity = '1';
                 content.style.transform = 'scale(1)';
                 content.style.opacity = '1';
-            }, 30);
+            });
 
-            const confettiCount = isMobile ? 20 : 40;
+            // 5. CONFETTI
             setTimeout(() => {
-                fireConfetti(confettiCount);
-            }, 200);
+                fireConfetti(isMobile ? 20 : 35);
+            }, 300);
 
-            const duration = isMobile ? 3000 : 3500;
+            // 6. HAPUS OVERLAY
+            const duration = isMobile ? 2500 : 3000;
             setTimeout(() => {
-                try {
-                    content.style.transform = 'scale(0.5)';
-                    content.style.opacity = '0';
-                    overlay.style.opacity = '0';
-                    
-                    setTimeout(() => {
-                        videoEl.pause();
-                        videoEl.src = '';
-                        if (overlay && overlay.parentNode) {
-                            overlay.parentNode.removeChild(overlay);
-                        }
-                        window._levelUpActive = false;
-                        if (bgVideo) {
-                            const idleFile = getVideoFile('backdroputama');
-                            bgVideo.src = idleFile;
-                            bgVideo.load();
-                            bgVideo.loop = true;
-                            bgVideo.muted = true;
-                            bgVideo.volume = 0.5;
-                            bgVideo.play().catch(() => {});
-                        }
-                    }, 400);
-                } catch(e) {
-                    if (overlay && overlay.parentNode) {
-                        overlay.parentNode.removeChild(overlay);
-                    }
+                content.style.transform = 'scale(0.5)';
+                content.style.opacity = '0';
+                overlay.style.opacity = '0';
+                setTimeout(() => {
+                    videoEl.pause();
+                    videoEl.src = '';
+                    if (overlay && overlay.parentNode) overlay.parentNode.removeChild(overlay);
                     window._levelUpActive = false;
-                }
+                    if (bgVideo) {
+                        const idleFile = getVideoFile('backdroputama');
+                        bgVideo.src = idleFile;
+                        bgVideo.load();
+                        bgVideo.loop = true;
+                        bgVideo.muted = true;
+                        bgVideo.play().catch(() => {});
+                    }
+                }, 300);
             }, duration);
 
         } catch(e) {
@@ -701,7 +672,7 @@
     }
 
     // ================================================
-    // SPARKLE & CONFETTI
+    // SPARKLE & CONFETTI (TETAP ESTETIS, TAPI RINGAN)
     // ================================================
     function createSparkles(x, y, count = 8) {
         const emojis = ['✨', '⭐', '🌟', '💫'];
@@ -712,12 +683,12 @@
             el.textContent = emojis[Math.floor(Math.random() * emojis.length)];
             el.style.left = (x + (Math.random() - 0.5) * 20) + 'px';
             el.style.top = (y + (Math.random() - 0.5) * 20) + 'px';
-            el.style.setProperty('--tx', (Math.random() - 0.5) * 120 + 'px');
-            el.style.setProperty('--ty', (Math.random() - 0.5) * 120 - 60 + 'px');
-            el.style.fontSize = (0.8 + Math.random() * 0.8) + 'rem';
+            el.style.setProperty('--tx', (Math.random() - 0.5) * 100 + 'px');
+            el.style.setProperty('--ty', (Math.random() - 0.5) * 100 - 50 + 'px');
+            el.style.fontSize = (0.7 + Math.random() * 0.7) + 'rem';
             el.style.animationDuration = (0.5 + Math.random() * 0.4) + 's';
             document.body.appendChild(el);
-            setTimeout(() => el.remove(), 1000);
+            setTimeout(() => el.remove(), 900);
         }
     }
 
@@ -727,15 +698,15 @@
         for (let i=0; i<actualCount; i++) {
             const piece = document.createElement('div');
             piece.className = 'confetti-piece';
-            const size = 6 + Math.random() * 10;
+            const size = 5 + Math.random() * 8;
             piece.style.width = size + 'px';
             piece.style.height = size * (0.4 + Math.random() * 0.6) + 'px';
             piece.style.background = colors[Math.floor(Math.random() * colors.length)];
             piece.style.left = Math.random() * 100 + '%';
             piece.style.top = '-10%';
             piece.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
-            piece.style.animationDuration = (2 + Math.random() * 3) + 's';
-            piece.style.animationDelay = (Math.random() * 1.2) + 's';
+            piece.style.animationDuration = (1.8 + Math.random() * 2.5) + 's';
+            piece.style.animationDelay = (Math.random() * 1) + 's';
             piece.style.transform = `rotate(${Math.random() * 360}deg)`;
             confettiContainer.appendChild(piece);
             setTimeout(() => piece.remove(), 5000);
@@ -788,11 +759,11 @@
         const tiles = document.querySelectorAll('.letter-tile');
         floatingTiles = [];
         tiles.forEach((tile, i) => {
-            const delay = Math.random() * 3;
-            const duration = 2.8 + Math.random() * 1.8;
-            const offsetY = isMobile ? 4 + Math.random() * 4 : 6 + Math.random() * 8;
-            const rotMin = isMobile ? -1 + Math.random() * 1 : -3 + Math.random() * 2;
-            const rotMax = isMobile ? 1 + Math.random() * 1 : 3 + Math.random() * 2;
+            const delay = Math.random() * 2.5;
+            const duration = 2.5 + Math.random() * 1.5;
+            const offsetY = isMobile ? 3 + Math.random() * 3 : 6 + Math.random() * 6;
+            const rotMin = isMobile ? -1 : -2;
+            const rotMax = isMobile ? 1 : 2;
             floatingTiles.push({
                 el: tile,
                 delay, duration, offsetY, rotMin, rotMax,
@@ -976,6 +947,7 @@
     // INIT GAME
     // ================================================
     function initGameAfterStart() {
+        // Play background video langsung
         initBackgroundVideo();
         
         currentLevel = 0;
@@ -994,15 +966,8 @@
     }
 
     // ================================================
-    // RESIZE HANDLER
+    // RESIZE HANDLER (DINONAKTIFKAN UNTUK PERFORMA)
     // ================================================
-    let resizeTimeout;
-    window.addEventListener('resize', function() {
-        clearTimeout(resizeTimeout);
-        resizeTimeout = setTimeout(() => {
-            console.log('🔄 Resize detected');
-        }, 500);
-    });
 
     resetBtn.addEventListener('click', resetCurrentWord);
 
